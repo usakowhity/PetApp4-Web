@@ -1,12 +1,12 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 完全動作版 main.js
+// 完全安定版 main.js
 // ===============================
 
 // -------------------------------
-// 定数（EAR安定化版）
+// 定数（EAR安定化）
 // -------------------------------
-const BLINK_EAR_THRESHOLD = 0.17;   // 誤検出防止のため低めに
+const BLINK_EAR_THRESHOLD = 0.15;   // 誤検出防止のため低めに
 const BLINK_DURATION_MS = 400;      // 0.4秒以上閉じたら瞬き扱い
 
 const NO_INPUT_SLEEP_MS = 10000;
@@ -179,7 +179,7 @@ async function calibrateCatVoice() {
 calibrateCatVoice();
 
 // ===============================
-// MediaPipe FaceMesh（瞬き検出）
+// MediaPipe FaceMesh（瞬き検出・安定化）
 // ===============================
 const faceMesh = new FaceMesh({
   locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -190,6 +190,8 @@ faceMesh.setOptions({
   refineLandmarks: true
 });
 
+let prevEAR = null;
+
 faceMesh.onResults(results => {
   if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
 
@@ -199,6 +201,13 @@ faceMesh.onResults(results => {
 
   // EAR 異常値フィルタ（誤検出防止）
   if (EAR < 0.05 || EAR > 0.5) return;
+
+  // EAR変化量フィルタ（安定化）
+  if (prevEAR !== null && Math.abs(EAR - prevEAR) < 0.01) {
+    prevEAR = EAR;
+    return;
+  }
+  prevEAR = EAR;
 
   if (EAR < BLINK_EAR_THRESHOLD) {
     if (!blinkStart) blinkStart = now;
@@ -328,7 +337,7 @@ function handleVoice(type) {
 }
 
 // ===============================
-// スワイプ判定
+// スワイプ判定（ゆっくり / 早い）
 // ===============================
 let swipeStart = null;
 
@@ -393,4 +402,3 @@ setInterval(() => {
     setState("sleep");
   }
 }, 1000);
-
