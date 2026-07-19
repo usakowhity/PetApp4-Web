@@ -50,15 +50,16 @@ function setImage(state) {
 // 状態変更
 // -------------------------------
 let lastAffectionTime = 0;
-const AFFECTION_COOLDOWN_MS = 3000; // 3秒間は再発禁止
+const AFFECTION_COOLDOWN_MS = 4000; // 4秒間は再発禁止（少し長めに）
 
 function setState(newState) {
   if (currentState === newState) return;
 
-  // クールダウンチェック（Affection連発防止）
   const now = Date.now();
+
+  // クールダウンチェック（Affection連発防止）
   if (newState === "affection" && now - lastAffectionTime < AFFECTION_COOLDOWN_MS) {
-    return; // 3秒以内なら再度Affectionに入らない
+    return; // 4秒以内なら再度Affectionに入らない
   }
 
   currentState = newState;
@@ -92,6 +93,7 @@ function setState(newState) {
     }, STATE_RETURN_MS);
   }
 }
+
 
 
 // ===============================
