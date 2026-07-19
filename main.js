@@ -10,7 +10,7 @@ const BLINK_EAR_THRESHOLD = 0.21;
 const BLINK_DURATION_MS = 300;
 
 const NO_INPUT_SLEEP_MS = 10000; // 10秒無操作でSleep
-const STATE_RETURN_MS = 3000;    // Neutralへ戻る時間を短縮
+const STATE_RETURN_MS = 3000;    // Neutralへ戻る時間
 
 const SLEEP_DURATION_MS = 7000;
 const STRETCH_DURATION_MS = 2000;
@@ -22,6 +22,40 @@ let currentState = "neutral";
 let lastInputTime = Date.now();
 let blinkStart = null;
 let stateTimer = null;
+
+// -------------------------------
+// Affection クールダウン（鳴き声連発防止）
+// -------------------------------
+let lastAffectionTime = 0;
+const AFFECTION_COOLDOWN_MS = 4000;
+
+// -------------------------------
+// 猫語検定ランク管理（README準拠）
+// -------------------------------
+let catRank = 5;     // 初期ランク：5級
+let catScore = 0;    // スコア累積
+
+function updateCatRank(change) {
+  catScore += change;
+
+  // スコアに応じてランク変動（1〜5級）
+  if (catScore >= 50 && catRank > 1) {
+    catRank--;
+    catScore = 0;
+  }
+
+  if (catScore <= -30 && catRank < 5) {
+    catRank++;
+    catScore = 0;
+  }
+
+  // 肉球印（README仕様）
+  const paws = "🐾".repeat(6 - catRank);
+
+  // 表示更新
+  const points = document.getElementById("points");
+  points.textContent = `猫語検定 ${catRank}級${paws}`;
+}
 
 // -------------------------------
 // 画像セット
@@ -49,30 +83,35 @@ function setImage(state) {
 // -------------------------------
 // 状態変更
 // -------------------------------
-let lastAffectionTime = 0;
-const AFFECTION_COOLDOWN_MS = 4000; // 4秒間は再発禁止（少し長めに）
-
 function setState(newState) {
-  if (currentState === newState) return;
-
   const now = Date.now();
 
-  // クールダウンチェック（Affection連発防止）
+  // Affection クールダウン（鳴き声連発防止）
   if (newState === "affection" && now - lastAffectionTime < AFFECTION_COOLDOWN_MS) {
-    return; // 4秒以内なら再度Affectionに入らない
+    return;
   }
+
+  if (currentState === newState) return;
 
   currentState = newState;
   setImage(newState);
   lastInputTime = now;
   clearTimeout(stateTimer);
 
-  // Affection時に鳴き声再生（クールダウン更新）
+  // Affection：鳴き声＋ランク上昇
   if (newState === "affection") {
     lastAffectionTime = now;
+
     const audio = new Audio("assets/audio/affection_mew.mp3");
     audio.currentTime = 0;
     audio.play();
+
+    updateCatRank(+5);
+  }
+
+  // Avoidance：ランク下降
+  if (newState === "avoidance") {
+    updateCatRank(-3);
   }
 
   // Sleep → Stretch → Neutral
@@ -94,21 +133,12 @@ function setState(newState) {
   }
 }
 
-
-
 // ===============================
-// 猫語キャリブレーション（Myuの鳴き声を基準にする）
+// 猫語キャリブレーション（Myuの鳴き声を基準）
 // ===============================
 const CAT_VOICE_URL = "assets/audio/affection_mew.mp3";
 
-let catProfile = {
-  low: 0,
-  mid: 0,
-  high: 0,
-  volume: 0,
-  ready: false
-};
-
+let catProfile = { low: 0, mid: 0, high: 0, volume: 0, ready: false };
 const calibAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function avg(arr) {
@@ -120,12 +150,7 @@ async function calibrateCatVoice() {
   const arrayBuffer = await response.arrayBuffer();
   const audioBuffer = await calibAudioCtx.decodeAudioData(arrayBuffer);
 
-  const offlineCtx = new OfflineAudioContext(
-    1,
-    audioBuffer.length,
-    audioBuffer.sampleRate
-  );
-
+  const offlineCtx = new OfflineAudioContext(1, audioBuffer.length, audioBuffer.sampleRate);
   const source = offlineCtx.createBufferSource();
   source.buffer = audioBuffer;
 
@@ -134,7 +159,6 @@ async function calibrateCatVoice() {
 
   source.connect(analyser);
   analyser.connect(offlineCtx.destination);
-
   source.start(0);
 
   const data = new Uint8Array(analyser.frequencyBinCount);
@@ -170,18 +194,15 @@ faceMesh.onResults(results => {
   if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
 
   const lm = results.multiFaceLandmarks[0];
-
   const EAR = calcEAR(lm[159], lm[145], lm[33], lm[133]);
   const now = Date.now();
 
   if (EAR < BLINK_EAR_THRESHOLD) {
     if (!blinkStart) blinkStart = now;
+
     if (now - blinkStart > BLINK_DURATION_MS) {
-      if (currentState === "neutral") {
-        setState("approach");
-      } else if (currentState === "attention") {
-        setState("affection");
-      }
+      if (currentState === "neutral") setState("approach");
+      else if (currentState === "attention") setState("affection");
     }
   } else {
     blinkStart = null;
@@ -197,15 +218,11 @@ function calcEAR(top, bottom, left, right) {
 }
 
 function distance(a, b) {
-  return Math.sqrt(
-    (a.x - b.x) ** 2 +
-    (a.y - b.y) ** 2 +
-    (a.z - b.z) ** 2
-  );
+  return Math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2);
 }
 
 // ===============================
-// カメラ入力開始（GitHub Pagesで確実に動く）
+// カメラ入力開始
 // ===============================
 const videoElement = document.createElement("video");
 videoElement.style.display = "none";
