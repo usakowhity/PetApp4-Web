@@ -6,8 +6,8 @@
 // -------------------------------
 // 定数（EAR安定化）
 // -------------------------------
-const BLINK_EAR_THRESHOLD = 0.15;   // 誤検出防止のため低めに
-const BLINK_DURATION_MS = 400;      // 0.4秒以上閉じたら瞬き扱い
+const BLINK_EAR_THRESHOLD = 0.15;
+const BLINK_DURATION_MS = 400;
 
 const NO_INPUT_SLEEP_MS = 10000;
 const STATE_RETURN_MS = 3000;
@@ -24,7 +24,7 @@ let blinkStart = null;
 let stateTimer = null;
 
 // -------------------------------
-// Affection クールダウン（鳴き声連発防止）
+// Affection クールダウン
 // -------------------------------
 let lastAffectionTime = 0;
 const AFFECTION_COOLDOWN_MS = 4000;
@@ -32,8 +32,8 @@ const AFFECTION_COOLDOWN_MS = 4000;
 // -------------------------------
 // 猫語検定ランク管理（README準拠）
 // -------------------------------
-let catRank = 5;     // 初期ランク：5級
-let catScore = 0;    // スコア累積
+let catRank = 5;
+let catScore = 0;
 
 function updateCatRank(change) {
   catScore += change;
@@ -49,7 +49,6 @@ function updateCatRank(change) {
   }
 
   const paws = "🐾".repeat(6 - catRank);
-
   const points = document.getElementById("points");
   points.textContent = `猫語検定 ${catRank}級${paws}`;
 }
@@ -238,7 +237,7 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 // ===============================
-// 音声判定（catmimic誤判定防止版）
+// 音声判定（閾値微調整版）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -248,7 +247,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   const data = new Uint8Array(analyser.frequencyBinCount);
 
-  const CATMIMIC_THRESHOLD = 40;  // ←誤判定防止のため強化
+  const CATMIMIC_THRESHOLD = 30;  // ←微調整（誤判定防止＋正しい刺激復活）
 
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
@@ -260,12 +259,13 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const high = avg(highBand);
     const volume = avg(data);
 
-    // 小さすぎる音は完全無視（生活ノイズ対策）
-    if (volume < 50) return null;
+    // 小さすぎる音は無視（生活ノイズ対策）
+    if (volume < 35) return null;
 
-    if (!catProfile.ready) {
-      return null; // キャリブ前は誤判定しやすいので無効化
-    }
+    // soft 判定復活（Attention の入口）
+    if (volume < 20 && mid > low && high < mid) return "soft";
+
+    if (!catProfile.ready) return null;
 
     const dLow = Math.abs(low - catProfile.low);
     const dMid = Math.abs(mid - catProfile.mid);
@@ -299,14 +299,14 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（neutralではcatmimic完全無効化）
+// 音声による状態遷移（neutralではcatmimic無効化）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
   if (currentState === "neutral") {
-    if (type === "soft") return;        // 無効化
-    if (type === "catmimic") return;    // 完全無効化
+    if (type === "soft") setState("attention");
+    if (type === "catmimic") return; // neutralでは無効化
     if (type === "harsh") setState("avoidance");
     return;
   }
@@ -319,7 +319,7 @@ function handleVoice(type) {
 
   if (currentState === "attention") {
     if (type === "soft") setState("affection");
-    if (type === "catmimic") setState("affection"); // ←ここだけ許可
+    if (type === "catmimic") setState("affection");
     if (type === "harsh") setState("avoidance");
   }
 
