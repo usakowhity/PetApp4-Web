@@ -4,13 +4,13 @@
 // ===============================
 
 // -------------------------------
-// 定数
+// 定数（EAR安定化版）
 // -------------------------------
-const BLINK_EAR_THRESHOLD = 0.21;
-const BLINK_DURATION_MS = 300;
+const BLINK_EAR_THRESHOLD = 0.17;   // 誤検出防止のため低めに
+const BLINK_DURATION_MS = 400;      // 0.4秒以上閉じたら瞬き扱い
 
-const NO_INPUT_SLEEP_MS = 10000; // 10秒無操作でSleep
-const STATE_RETURN_MS = 3000;    // Neutralへ戻る時間
+const NO_INPUT_SLEEP_MS = 10000;
+const STATE_RETURN_MS = 3000;
 
 const SLEEP_DURATION_MS = 7000;
 const STRETCH_DURATION_MS = 2000;
@@ -134,7 +134,7 @@ function setState(newState) {
 }
 
 // ===============================
-// 猫語キャリブレーション（Myuの鳴き声を基準）
+// 猫語キャリブレーション
 // ===============================
 const CAT_VOICE_URL = "assets/audio/affection_mew.mp3";
 
@@ -197,6 +197,9 @@ faceMesh.onResults(results => {
   const EAR = calcEAR(lm[159], lm[145], lm[33], lm[133]);
   const now = Date.now();
 
+  // EAR 異常値フィルタ（誤検出防止）
+  if (EAR < 0.05 || EAR > 0.5) return;
+
   if (EAR < BLINK_EAR_THRESHOLD) {
     if (!blinkStart) blinkStart = now;
 
@@ -239,7 +242,7 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 // ===============================
-// 音声判定（キャリブレーション対応）
+// 音声判定
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -325,7 +328,7 @@ function handleVoice(type) {
 }
 
 // ===============================
-// スワイプ判定（ゆっくり / 早い）
+// スワイプ判定
 // ===============================
 let swipeStart = null;
 
@@ -390,3 +393,4 @@ setInterval(() => {
     setState("sleep");
   }
 }, 1000);
+
