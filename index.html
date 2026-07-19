@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>PetApp4-Web (Myu Edition)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- MediaPipe FaceMesh -->
+  <script src="libs/mediapipe/face_mesh.js"></script>
+
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- 猫語検定協会（会長：Myu）公認 -->
+    <div id="rank-box">
+      <div id="rank">猫語検定協会（会長：Myu）公認</div>
+      <div id="points">猫語検定 5級🐾</div>
+    </div>
+
+    <!-- 猫画像（状態切り替え） -->
+    <div id="cat-box">
+      <img id="cat-image" src="assets/images/myu_neutral.png" alt="Myu">
+    </div>
+
+  </div>
+
+  <!-- メインロジック -->
+  <script src="main.js"></script>
+
+</body>
+</html>

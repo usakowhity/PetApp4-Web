@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: #f7f7f7;
+  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  text-align: center;
+}
+
+#rank-box {
+  margin-top: 20px;
+  font-size: 18px;
+  white-space: pre-line;
+  color: #444;
+}
+
+#points {
+  margin-top: 4px;
+  font-size: 20px;
+  color: #333;
+}
+
+#cat-box {
+  margin-top: 30px;
+}
+
+#cat-image {
+  width: 320px;
+  height: auto;
+  border-radius: 12px;
+}
