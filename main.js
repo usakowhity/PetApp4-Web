@@ -1,6 +1,6 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 完全安定版 main.js
+// 完全安定版 main.js（Part 1/2）
 // ===============================
 
 // -------------------------------
@@ -251,7 +251,7 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 // ===============================
-// 音声判定
+// 音声判定（catmimic誤判定防止版）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -260,6 +260,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   source.connect(analyser);
 
   const data = new Uint8Array(analyser.frequencyBinCount);
+
+  const CATMIMIC_THRESHOLD = 25;  // ←誤判定防止のため強化
 
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
@@ -271,6 +273,10 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const high = avg(highBand);
     const volume = avg(data);
 
+    // 小さすぎる音は無視（生活ノイズ対策）
+    if (volume < 30) return null;
+
+    // キャリブレーション前の簡易判定
     if (!catProfile.ready) {
       if (volume < 20 && mid > low && high < mid) return "soft";
       if (volume > 25 && mid > low && high > mid * 0.7) return "catmimic";
@@ -278,6 +284,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       return null;
     }
 
+    // キャリブレーション後の距離計算
     const dLow = Math.abs(low - catProfile.low);
     const dMid = Math.abs(mid - catProfile.mid);
     const dHigh = Math.abs(high - catProfile.high);
@@ -289,8 +296,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       dHigh * 1.0 +
       dVol * 0.3;
 
-    const CATMIMIC_THRESHOLD = 15;
-
+    // 猫語に近い音（閾値強化済）
     if (distance < CATMIMIC_THRESHOLD) return "catmimic";
 
     if (volume < 20 && mid > low && high < mid) return "soft";
@@ -312,25 +318,34 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   analyze();
 });
 
-// 音声による状態遷移
+// ===============================
+// 音声による状態遷移（neutralではcatmimic発火しない）
+// ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
+  // neutral は誤発火しやすいので catmimic を無効化
   if (currentState === "neutral") {
     if (type === "soft") setState("attention");
-    else if (type === "catmimic") setState("affection");
     else if (type === "harsh") setState("avoidance");
+    return;
   }
 
+  // approach
   if (currentState === "approach") {
-    if (type === "soft" || type === "catmimic") setState("affection");
+    if (type === "soft") setState("affection");
+    if (type === "catmimic") setState("affection");
     if (type === "harsh") setState("avoidance");
   }
 
+  // attention
   if (currentState === "attention") {
+    if (type === "soft") setState("affection");
+    if (type === "catmimic") setState("affection"); // ←ここだけ catmimic を許可
     if (type === "harsh") setState("avoidance");
   }
 
+  // affection 中は harsh のみ反応
   if (currentState === "affection") {
     if (type === "harsh") setState("avoidance");
   }
