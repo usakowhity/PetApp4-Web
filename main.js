@@ -49,17 +49,28 @@ function setImage(state) {
 // -------------------------------
 // 状態変更
 // -------------------------------
+let lastAffectionTime = 0;
+const AFFECTION_COOLDOWN_MS = 3000; // 3秒間は再発禁止
+
 function setState(newState) {
   if (currentState === newState) return;
 
+  // クールダウンチェック（Affection連発防止）
+  const now = Date.now();
+  if (newState === "affection" && now - lastAffectionTime < AFFECTION_COOLDOWN_MS) {
+    return; // 3秒以内なら再度Affectionに入らない
+  }
+
   currentState = newState;
   setImage(newState);
-  lastInputTime = Date.now();
+  lastInputTime = now;
   clearTimeout(stateTimer);
 
-  // Affection時に音声再生
+  // Affection時に鳴き声再生（クールダウン更新）
   if (newState === "affection") {
+    lastAffectionTime = now;
     const audio = new Audio("assets/audio/affection_mew.mp3");
+    audio.currentTime = 0;
     audio.play();
   }
 
@@ -81,6 +92,7 @@ function setState(newState) {
     }, STATE_RETURN_MS);
   }
 }
+
 
 // ===============================
 // 猫語キャリブレーション（Myuの鳴き声を基準にする）
