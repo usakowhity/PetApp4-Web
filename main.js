@@ -1,6 +1,6 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 完全仕様反映版 main.js（猫語キャリブレーション統合）
+// 完全動作版 main.js
 // ===============================
 
 // -------------------------------
@@ -10,9 +10,8 @@ const BLINK_EAR_THRESHOLD = 0.21;
 const BLINK_DURATION_MS = 300;
 
 const NO_INPUT_SLEEP_MS = 10000; // 10秒無操作でSleep
-const STATE_RETURN_MS = 5000;    // 他状態→Neutralは5秒で戻る
+const STATE_RETURN_MS = 3000;    // Neutralへ戻る時間を短縮
 
-// Sleep → Stretch → Neutral
 const SLEEP_DURATION_MS = 7000;
 const STRETCH_DURATION_MS = 2000;
 
@@ -56,8 +55,13 @@ function setState(newState) {
   currentState = newState;
   setImage(newState);
   lastInputTime = Date.now();
-
   clearTimeout(stateTimer);
+
+  // Affection時に音声再生
+  if (newState === "affection") {
+    const audio = new Audio("assets/audio/affection_mew.mp3");
+    audio.play();
+  }
 
   // Sleep → Stretch → Neutral
   if (newState === "sleep") {
@@ -70,7 +74,7 @@ function setState(newState) {
     return;
   }
 
-  // その他の状態 → Neutral（5秒）
+  // その他の状態 → Neutral（3秒）
   if (newState !== "neutral") {
     stateTimer = setTimeout(() => {
       setState("neutral");
@@ -124,13 +128,9 @@ async function calibrateCatVoice() {
   offlineCtx.startRendering().then(() => {
     analyser.getByteFrequencyData(data);
 
-    const lowBand = data.slice(0, 50);
-    const midBand = data.slice(50, 120);
-    const highBand = data.slice(120, 200);
-
-    catProfile.low = avg(lowBand);
-    catProfile.mid = avg(midBand);
-    catProfile.high = avg(highBand);
+    catProfile.low = avg(data.slice(0, 50));
+    catProfile.mid = avg(data.slice(50, 120));
+    catProfile.high = avg(data.slice(120, 200));
     catProfile.volume = avg(data);
     catProfile.ready = true;
 
@@ -138,7 +138,6 @@ async function calibrateCatVoice() {
   });
 }
 
-// ページロード時に一度だけ呼ぶ
 calibrateCatVoice();
 
 // ===============================
@@ -177,7 +176,6 @@ faceMesh.onResults(results => {
   lastInputTime = now;
 });
 
-
 function calcEAR(top, bottom, left, right) {
   const v = distance(top, bottom);
   const h = distance(left, right);
@@ -191,6 +189,23 @@ function distance(a, b) {
     (a.z - b.z) ** 2
   );
 }
+
+// ===============================
+// カメラ入力開始（GitHub Pagesで確実に動く）
+// ===============================
+const videoElement = document.createElement("video");
+videoElement.style.display = "none";
+document.body.appendChild(videoElement);
+
+const camera = new Camera(videoElement, {
+  onFrame: async () => {
+    await faceMesh.send({ image: videoElement });
+  },
+  width: 640,
+  height: 480
+});
+
+camera.start();
 
 // ===============================
 // 音声判定（キャリブレーション対応）
