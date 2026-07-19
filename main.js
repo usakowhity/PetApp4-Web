@@ -1,13 +1,13 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 完全安定版 main.js（Part 1/2）
+// 反応復活版 main.js（Part 1/2）
 // ===============================
 
 // -------------------------------
 // 定数（EAR安定化）
 // -------------------------------
 const BLINK_EAR_THRESHOLD = 0.15;
-const BLINK_DURATION_MS = 400;
+const BLINK_DURATION_MS = 350;   // 少し短くして反応しやすくする
 
 const NO_INPUT_SLEEP_MS = 10000;
 const STATE_RETURN_MS = 3000;
@@ -30,7 +30,7 @@ let lastAffectionTime = 0;
 const AFFECTION_COOLDOWN_MS = 4000;
 
 // -------------------------------
-// 猫語検定ランク管理（README準拠）
+// 猫語検定ランク管理
 // -------------------------------
 let catRank = 5;
 let catScore = 0;
@@ -167,7 +167,7 @@ async function calibrateCatVoice() {
 calibrateCatVoice();
 
 // ===============================
-// MediaPipe FaceMesh（瞬き検出・安定化）
+// MediaPipe FaceMesh（瞬き検出・反応復活）
 // ===============================
 const faceMesh = new FaceMesh({
   locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -195,11 +195,13 @@ faceMesh.onResults(results => {
   }
   prevEAR = EAR;
 
+  // ★ 反応復活：瞬きで attention に入りやすくする
   if (EAR < BLINK_EAR_THRESHOLD) {
     if (!blinkStart) blinkStart = now;
 
     if (now - blinkStart > BLINK_DURATION_MS) {
       if (currentState === "neutral") setState("approach");
+      else if (currentState === "approach") setState("attention");
       else if (currentState === "attention") setState("affection");
     }
   } else {
@@ -237,7 +239,7 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 // ===============================
-// 音声判定（閾値微調整版）
+// 音声判定（反応復活版）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -247,7 +249,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   const data = new Uint8Array(analyser.frequencyBinCount);
 
-  const CATMIMIC_THRESHOLD = 30;  // ←微調整（誤判定防止＋正しい刺激復活）
+  const CATMIMIC_THRESHOLD = 35;  // ←反応復活のため少し緩める
 
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
@@ -259,11 +261,11 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const high = avg(highBand);
     const volume = avg(data);
 
-    // 小さすぎる音は無視（生活ノイズ対策）
-    if (volume < 35) return null;
+    // ★ 反応復活：soft を復活（Attention の入口）
+    if (volume < 30 && mid > low && high < mid) return "soft";
 
-    // soft 判定復活（Attention の入口）
-    if (volume < 20 && mid > low && high < mid) return "soft";
+    // 小さすぎる音は無視
+    if (volume < 35) return null;
 
     if (!catProfile.ready) return null;
 
@@ -299,21 +301,22 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（neutralではcatmimic無効化）
+// 音声による状態遷移（neutralでも反応復活）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
+  // ★ neutral でも attention に入れるようにする
   if (currentState === "neutral") {
     if (type === "soft") setState("attention");
-    if (type === "catmimic") return; // neutralでは無効化
+    if (type === "catmimic") setState("attention"); // ←AffectionではなくAttention
     if (type === "harsh") setState("avoidance");
     return;
   }
 
   if (currentState === "approach") {
-    if (type === "soft") setState("affection");
-    if (type === "catmimic") setState("affection");
+    if (type === "soft") setState("attention");
+    if (type === "catmimic") setState("attention");
     if (type === "harsh") setState("avoidance");
   }
 
