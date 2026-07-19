@@ -8,8 +8,8 @@
   <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 
-  <!-- MediaPipe FaceMesh -->
-  <script src="libs/mediapipe/face_mesh.js"></script>
+  <!-- MediaPipe FaceMesh（CDN版） -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 </head>
 <body>
 
@@ -23,14 +23,14 @@
 
     <!-- 猫画像（状態切り替え） -->
     <div id="cat-box">
-      <!-- ★ main.js と一致するIDに修正（pet-image） -->
       <img id="pet-image" src="assets/images/myu_neutral.png" alt="Myu">
     </div>
 
   </div>
 
-  <!-- メインロジック（HTML読み込み後に実行される位置） -->
+  <!-- メインロジック -->
   <script src="main.js"></script>
 
 </body>
 </html>
+

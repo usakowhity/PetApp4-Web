@@ -145,7 +145,7 @@ calibrateCatVoice();
 // MediaPipe FaceMesh（瞬き検出）
 // ===============================
 const faceMesh = new FaceMesh({
-  locateFile: file => `libs/mediapipe/${file}`
+  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
 });
 
 faceMesh.setOptions({
@@ -176,6 +176,7 @@ faceMesh.onResults(results => {
 
   lastInputTime = now;
 });
+
 
 function calcEAR(top, bottom, left, right) {
   const v = distance(top, bottom);
