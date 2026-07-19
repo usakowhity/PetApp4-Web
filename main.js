@@ -38,7 +38,6 @@ let catScore = 0;    // スコア累積
 function updateCatRank(change) {
   catScore += change;
 
-  // スコアに応じてランク変動（1〜5級）
   if (catScore >= 50 && catRank > 1) {
     catRank--;
     catScore = 0;
@@ -49,10 +48,8 @@ function updateCatRank(change) {
     catScore = 0;
   }
 
-  // 肉球印（README仕様）
   const paws = "🐾".repeat(6 - catRank);
 
-  // 表示更新
   const points = document.getElementById("points");
   points.textContent = `猫語検定 ${catRank}級${paws}`;
 }
@@ -72,9 +69,6 @@ const images = {
   stretch: "assets/images/myu_stretch.png"
 };
 
-// -------------------------------
-// 画像切り替え
-// -------------------------------
 function setImage(state) {
   const img = document.getElementById("pet-image");
   img.src = images[state];
@@ -86,7 +80,6 @@ function setImage(state) {
 function setState(newState) {
   const now = Date.now();
 
-  // Affection クールダウン（鳴き声連発防止）
   if (newState === "affection" && now - lastAffectionTime < AFFECTION_COOLDOWN_MS) {
     return;
   }
@@ -98,7 +91,6 @@ function setState(newState) {
   lastInputTime = now;
   clearTimeout(stateTimer);
 
-  // Affection：鳴き声＋ランク上昇
   if (newState === "affection") {
     lastAffectionTime = now;
 
@@ -109,12 +101,10 @@ function setState(newState) {
     updateCatRank(+5);
   }
 
-  // Avoidance：ランク下降
   if (newState === "avoidance") {
     updateCatRank(-3);
   }
 
-  // Sleep → Stretch → Neutral
   if (newState === "sleep") {
     stateTimer = setTimeout(() => {
       setState("stretch");
@@ -125,7 +115,6 @@ function setState(newState) {
     return;
   }
 
-  // その他の状態 → Neutral（3秒）
   if (newState !== "neutral") {
     stateTimer = setTimeout(() => {
       setState("neutral");
@@ -199,10 +188,8 @@ faceMesh.onResults(results => {
   const EAR = calcEAR(lm[159], lm[145], lm[33], lm[133]);
   const now = Date.now();
 
-  // EAR 異常値フィルタ（誤検出防止）
   if (EAR < 0.05 || EAR > 0.5) return;
 
-  // EAR変化量フィルタ（安定化）
   if (prevEAR !== null && Math.abs(EAR - prevEAR) < 0.01) {
     prevEAR = EAR;
     return;
@@ -261,7 +248,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   const data = new Uint8Array(analyser.frequencyBinCount);
 
-  const CATMIMIC_THRESHOLD = 25;  // ←誤判定防止のため強化
+  const CATMIMIC_THRESHOLD = 40;  // ←誤判定防止のため強化
 
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
@@ -273,18 +260,13 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const high = avg(highBand);
     const volume = avg(data);
 
-    // 小さすぎる音は無視（生活ノイズ対策）
-    if (volume < 30) return null;
+    // 小さすぎる音は完全無視（生活ノイズ対策）
+    if (volume < 50) return null;
 
-    // キャリブレーション前の簡易判定
     if (!catProfile.ready) {
-      if (volume < 20 && mid > low && high < mid) return "soft";
-      if (volume > 25 && mid > low && high > mid * 0.7) return "catmimic";
-      if (volume > 40 && high > mid) return "harsh";
-      return null;
+      return null; // キャリブ前は誤判定しやすいので無効化
     }
 
-    // キャリブレーション後の距離計算
     const dLow = Math.abs(low - catProfile.low);
     const dMid = Math.abs(mid - catProfile.mid);
     const dHigh = Math.abs(high - catProfile.high);
@@ -296,11 +278,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       dHigh * 1.0 +
       dVol * 0.3;
 
-    // 猫語に近い音（閾値強化済）
     if (distance < CATMIMIC_THRESHOLD) return "catmimic";
 
-    if (volume < 20 && mid > low && high < mid) return "soft";
-    if (volume > 40 && high > mid) return "harsh";
+    if (volume > 60 && high > mid) return "harsh";
 
     return null;
   }
@@ -319,40 +299,37 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（neutralではcatmimic発火しない）
+// 音声による状態遷移（neutralではcatmimic完全無効化）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
-  // neutral は誤発火しやすいので catmimic を無効化
   if (currentState === "neutral") {
-    if (type === "soft") setState("attention");
-    else if (type === "harsh") setState("avoidance");
+    if (type === "soft") return;        // 無効化
+    if (type === "catmimic") return;    // 完全無効化
+    if (type === "harsh") setState("avoidance");
     return;
   }
 
-  // approach
   if (currentState === "approach") {
     if (type === "soft") setState("affection");
     if (type === "catmimic") setState("affection");
     if (type === "harsh") setState("avoidance");
   }
 
-  // attention
   if (currentState === "attention") {
     if (type === "soft") setState("affection");
-    if (type === "catmimic") setState("affection"); // ←ここだけ catmimic を許可
+    if (type === "catmimic") setState("affection"); // ←ここだけ許可
     if (type === "harsh") setState("avoidance");
   }
 
-  // affection 中は harsh のみ反応
   if (currentState === "affection") {
     if (type === "harsh") setState("avoidance");
   }
 }
 
 // ===============================
-// スワイプ判定（ゆっくり / 早い）
+// スワイプ判定
 // ===============================
 let swipeStart = null;
 
