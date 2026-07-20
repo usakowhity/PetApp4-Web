@@ -2,35 +2,40 @@ body {
   margin: 0;
   padding: 0;
   background: #f7f7f7;
-  font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+  font-family: 'M PLUS Rounded 1c', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
   text-align: center;
 }
 
+/* 協会公認タイトル */
 #rank-box {
   margin-top: 20px;
-  font-size: 32px;        /* ← 18px → 32px（約2倍） */
+  font-size: 32px;        /* 18px → 32px（約2倍） */
   white-space: pre-line;
   color: #444;
   font-weight: bold;
 }
 
+/* 猫語検定ランク表示 */
 #points {
   margin-top: 8px;
-  font-size: 40px;        /* ← 20px → 40px（約2倍） */
+  font-size: 40px;        /* 20px → 40px（約2倍） */
   color: #333;
   font-weight: bold;
   line-height: 1.4;
 }
 
+/* 肉球印だけさらに大きく */
 #points .paws {
-  font-size: 48px;        /* ← 肉球だけさらに大きく */
+  font-size: 48px;        /* 肉球印を3倍に拡大 */
 }
 
+/* 猫画像ボックス */
 #cat-box {
   margin-top: 30px;
 }
 
-#cat-image {
+/* 猫画像 */
+#pet-image {
   width: 320px;
   height: auto;
   border-radius: 12px;
