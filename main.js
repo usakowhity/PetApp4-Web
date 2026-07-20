@@ -373,59 +373,75 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   let lastEnv = [];
 
+  // 暗騒音キャリブレーション開始
   startNoiseCalibration(analyser);
 
-  const CAT_SPEECH_ATTENTION = 40;
-  const CAT_SPEECH_AFFECTION = 70;
+  // 猫語度の閾値（人間の猫なで声に合わせて調整）
+  const CAT_SPEECH_ATTENTION = 25;   // Attention に入る最低ライン
+  const CAT_SPEECH_AFFECTION = 45;   // Affection に入る猫語度
+
 
   function classifyVoiceByCatSpeech(data) {
-    const lowBand = data.slice(0, 50);
-    const midBand = data.slice(50, 120);
+
+    // 周波数帯域の抽出
+    const lowBand  = data.slice(0, 50);
+    const midBand  = data.slice(50, 120);
     const highBand = data.slice(120, 200);
 
-    const low = avg(lowBand);
-    const mid = avg(midBand);
-    const high = avg(highBand);
+    const low    = avg(lowBand);
+    const mid    = avg(midBand);
+    const high   = avg(highBand);
     const volume = avg(data);
 
     const now = Date.now();
 
+    // キャリブレーション未完了なら判定しない
     if (!noiseProfile.ready || !catProfile.ready) return null;
 
-    const adjLow = low - noiseProfile.low;
-    const adjMid = mid - noiseProfile.mid;
-    const adjHigh = high - noiseProfile.high;
-    const adjVol = volume - noiseProfile.volume;
+    // 暗騒音補正
+    const adjLow  = low    - noiseProfile.low;
+    const adjMid  = mid    - noiseProfile.mid;
+    const adjHigh = high   - noiseProfile.high;
+    const adjVol  = volume - noiseProfile.volume;
 
+    // 音量が小さすぎる → 無視
     if (adjVol < 10) {
       longSoundStart = null;
       lastEnv = [];
       return null;
     }
 
+    // 長音クールダウン
     if (now - lastLongSoundTime < LONG_SOUND_COOLDOWN) {
       return null;
     }
 
+    // 包絡線（音量の時間変化）
     lastEnv.push(adjVol);
-    if (lastEnv.length > 50) lastEnv.shift();
+    if (lastEnv.length > 50) lastEnv.shift(); // 約0.5秒分
 
     let envSlope = 0;
     if (lastEnv.length > 5) {
       envSlope = (lastEnv[lastEnv.length - 1] - lastEnv[0]) / lastEnv.length;
     }
 
+    // 猫語スペクトルの基本条件
     const isCatLikeSpectrum =
       adjVol > 20 &&
       adjMid > 15 &&
       adjMid > adjHigh + 10;
 
     if (isCatLikeSpectrum) {
+
+      // 長音開始
       if (!longSoundStart) longSoundStart = now;
 
       const durationMs = now - longSoundStart;
 
+      // 長音の範囲
       if (durationMs > 300 && durationMs < 1200) {
+
+        // 特徴量セット
         const features = {
           low: low,
           mid: mid,
@@ -435,8 +451,10 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
           envSlope: envSlope
         };
 
+        // 猫語度スコア
         const score = computeCatSpeechScore(features);
 
+        // 強い猫語 → Affection
         if (score >= CAT_SPEECH_AFFECTION) {
           lastLongSoundTime = now;
           longSoundStart = null;
@@ -444,6 +462,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
           return "cat_speech_strong";
         }
 
+        // 弱い猫語 → Attention
         if (score >= CAT_SPEECH_ATTENTION) {
           lastLongSoundTime = now;
           longSoundStart = null;
@@ -451,6 +470,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
           return "cat_speech_weak";
         }
 
+        // 猫語度は低いが長音として成立
         if (durationMs > 550 && durationMs < 900) {
           lastLongSoundTime = now;
           longSoundStart = null;
@@ -458,14 +478,17 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
           return "nyan_long";
         }
       }
+
     } else {
       longSoundStart = null;
     }
 
+    // harsh（高音＋大音量）
     if (adjVol > 40 && adjHigh > adjMid) return "harsh";
 
     return null;
   }
+
 
   function analyze() {
     analyser.getByteFrequencyData(data);
