@@ -8,15 +8,22 @@ body {
 
 #rank-box {
   margin-top: 20px;
-  font-size: 18px;
+  font-size: 32px;        /* ← 18px → 32px（約2倍） */
   white-space: pre-line;
   color: #444;
+  font-weight: bold;
 }
 
 #points {
-  margin-top: 4px;
-  font-size: 20px;
+  margin-top: 8px;
+  font-size: 40px;        /* ← 20px → 40px（約2倍） */
   color: #333;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+#points .paws {
+  font-size: 48px;        /* ← 肉球だけさらに大きく */
 }
 
 #cat-box {

@@ -50,7 +50,7 @@ function updateCatRank(change) {
 
   const paws = "🐾".repeat(6 - catRank);
   const points = document.getElementById("points");
-  points.textContent = `猫語検定 ${catRank}級${paws}`;
+  points.innerHTML = `猫語検定 ${catRank}級 <span class="paws">${paws}</span>`;
 }
 
 // -------------------------------
