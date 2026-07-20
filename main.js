@@ -252,8 +252,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   // 長音検出用
   let longSoundStart = null;
-  let lastMid = 0;
-  let lastHigh = 0;
+  let lastLongSoundTime = 0;
+  const LONG_SOUND_COOLDOWN = 2000;
 
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
@@ -267,25 +267,32 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     const now = Date.now();
 
-    // -------------------------------
-    // 長音検出（ニャー／ミャー／ニャーオ／ニャーゴ）
-    // -------------------------------
+    // 長音の終了条件
+    if (volume < 45) {
+      longSoundStart = null;
+    }
+
+    // 長音のクールダウン
+    if (now - lastLongSoundTime < LONG_SOUND_COOLDOWN) {
+      return null;
+    }
+
+    // 長音の基本条件
     const isCatLike =
-      volume > 50 &&        // ノイズ対策
+      volume > 50 &&
       mid > low &&
-      mid > high * 0.7;     // mid の強さを厳しく
+      mid > high * 0.7;
 
     if (isCatLike) {
       if (!longSoundStart) longSoundStart = now;
 
       const duration = now - longSoundStart;
 
-      // 長音の持続時間を強化
-      if (duration > 450 && duration < 900) {
+      if (duration > 550 && duration < 900) {
+        lastLongSoundTime = now;
 
         if (high > lastHigh + 5) return "nyao";
         if (high < lastHigh - 5) return "nyago";
-
         if (mid > lastMid + 5) return "mya_long";
 
         return "nyan_long";
@@ -297,26 +304,14 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     lastMid = mid;
     lastHigh = high;
 
-    // -------------------------------
-    // 短い猫語（ニャッ）
-    // -------------------------------
     if (volume > 35 && mid > low && high < mid && !longSoundStart) {
       return "nyan_short";
     }
 
-    // -------------------------------
-    // soft（優しい声）
-    // -------------------------------
     if (volume < 30 && mid > low && high < mid) return "soft";
 
-    // -------------------------------
-    // harsh（強い音）
-    // -------------------------------
     if (volume > 60 && high > mid) return "harsh";
 
-    // -------------------------------
-    // catmimic（猫語に近い声質）
-    // -------------------------------
     if (catProfile.ready) {
       const dLow = Math.abs(low - catProfile.low);
       const dMid = Math.abs(mid - catProfile.mid);
@@ -459,4 +454,3 @@ setInterval(() => {
     setState("sleep");
   }
 }, 1000);
-
