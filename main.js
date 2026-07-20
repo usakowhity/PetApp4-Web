@@ -271,16 +271,17 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     // 長音検出（ニャー／ミャー／ニャーオ／ニャーゴ）
     // -------------------------------
     const isCatLike =
-      volume > 35 &&
+      volume > 50 &&        // ノイズ対策
       mid > low &&
-      mid > high * 0.8;
+      mid > high * 0.7;     // mid の強さを厳しく
 
     if (isCatLike) {
       if (!longSoundStart) longSoundStart = now;
 
       const duration = now - longSoundStart;
 
-      if (duration > 300 && duration < 900) {
+      // 長音の持続時間を強化
+      if (duration > 450 && duration < 900) {
 
         if (high > lastHigh + 5) return "nyao";
         if (high < lastHigh - 5) return "nyago";
