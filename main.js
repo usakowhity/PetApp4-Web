@@ -1,7 +1,6 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 暗騒音キャリブレーション + 長音のみ Attention
-// catmimic は「近距離（approach）」のみ Affection
+// attentionでcatmimic完全禁止版（最終安定版）
 // ===============================
 
 // -------------------------------
@@ -381,7 +380,7 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（attentionでcatmimic禁止）
+// 音声による状態遷移（attentionでcatmimic完全禁止）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
@@ -424,7 +423,7 @@ function handleVoice(type) {
   // -------------------------------
   if (currentState === "attention") {
 
-    // ★ catmimic は禁止（誤発火防止）
+    // ★ catmimic は完全禁止（誤発火防止）
     // 長音のみ Affection
     if (type === "nyan_long" || type === "mya_long") {
       setState("affection");
