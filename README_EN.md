@@ -1,8 +1,9 @@
 # 🐾 **PetApp4-Web (Myu Edition) — Updated README (English)**
 
 PetApp4-Web (Myu Edition) is a static‑image web pet application.  
-The cat reacts to **eye blink detection (EAR)**, **voice tone classification**,  
-**long‑meow detection**, and **swipe / mouse interactions**, changing its state in real time.
+The cat reacts to **eye blink detection (EAR)**,  
+**CatSpeechScore‑based voice analysis**,  
+and **swipe / mouse interactions**, changing its state in real time.
 
 It also includes a playful **Cat Language Certification** feature  
 that evaluates how “cat‑friendly” the user is (Joke element included).
@@ -26,35 +27,47 @@ PetApp4-Web/
 
 ## 🐾 Features
 
-### 1. Eye Blink Detection (EAR)
+---
+
+## 1. Eye Blink Detection (EAR)
 A slow blink triggers the **Approach** state.  
 Repeated gentle blinks lead to **Attention → Affection**.
 
 ---
 
-### 2. Voice Triggers (Tone Classification + Long‑Meow Detection)
+## 2. Voice Triggers (CatSpeechScore + Long‑Meow Detection)
 
-#### ■ Tone Classification
-- Soft voice → **Attention**  
-- Gentle cat‑mimic voice → **Affection**  
-- Harsh voice → **Avoidance**
+### ■ Cat Voice Calibration (Integrated Features)
+At startup, the app analyzes a real cat meow and extracts:
 
-#### ■ Long‑Meow Detection (New)
-Detects characteristic cat sounds such as “Nyaa”, “Myaa”, “Nyao”, “Nyago”.
+- Spectral features (low / mid / high / volume)  
+- Long‑meow duration  
+- Envelope rise slope  
 
-| Detection | Real Sound | State |
-|-----------|------------|--------|
-| **nyan_short** | Nya! | Attention |
-| **nyan_long** | Nyaa | Affection |
-| **mya_long** | Myaa | Affection |
-| **nyao** | Nyao | Play |
-| **nyago** | Nyago | Play |
-
-Long meows are detected using **frequency bands + volume + duration (300–900ms)**.
+These form the **Cat Voice Profile**.
 
 ---
 
-### 3. Swipe / Mouse Interaction
+### ■ CatSpeechScore
+User voice is analyzed in real time and compared with the profile.  
+A score (0–100) determines the reaction:
+
+| Score | Detection | State |
+|--------|-----------|--------|
+| **≥ 30** | cat_speech_strong | Affection |
+| **≥ 15** | cat_speech_weak | Attention |
+| **< 15** | — | No reaction |
+
+---
+
+### ■ Long‑Meow Detection (Supplemental)
+Even if the score is low,  
+long meows (“Nyaa”, “Myaa”, etc.) between **300–900ms**  
+can trigger Attention or Affection.
+
+---
+
+## 3. Swipe / Mouse Interaction
 - Gentle swipe → **Affection**  
 - Fast swipe → **Play**  
 - High‑speed mouse movement → **Play**  
@@ -62,8 +75,8 @@ Long meows are detected using **frequency bands + volume + duration (300–900ms
 
 ---
 
-### 4. Natural Sleep Flow
-After 10 seconds of no input, the cat enters **Sleep**, then transitions:
+## 4. Natural Sleep Flow
+After 10 seconds of no input:
 
 ```
 Sleep (7s)
@@ -75,12 +88,12 @@ Neutral
 
 ---
 
-### 5. Cat Language Certification (Joke Feature)
-Your interactions (blinks, voice, meows, swipes) affect your  
+## 5. Cat Language Certification (Joke Feature)
+Your interactions affect your  
 **Cat Language Rank (1–5)**.
 
 - Affection actions → Rank up  
 - Avoidance actions → Rank down  
 
-The rank is displayed at the top with **large paw icons 🐾**.
+Displayed with large **paw icons 🐾**.
 
