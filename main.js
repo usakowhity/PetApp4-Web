@@ -1,6 +1,6 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 暗騒音キャリブレーション + 長音検出 + 反応復活版（完全統合）
+// 暗騒音キャリブレーション + 長音のみ Attention + catmimic→Affection + Play音声廃止版
 // ===============================
 
 // -------------------------------
@@ -274,7 +274,7 @@ function startNoiseCalibration(analyser) {
 }
 
 // ===============================
-// 音声判定（暗騒音補正 + 長音検出）
+// 音声判定（長音のみ Attention + catmimic→Affection）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -286,7 +286,6 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   const CATMIMIC_THRESHOLD = 35;
 
-  // 長音検出用
   let longSoundStart = null;
   let lastLongSoundTime = 0;
   const LONG_SOUND_COOLDOWN = 2000;
@@ -294,7 +293,6 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   let lastMid = 0;
   let lastHigh = 0;
 
-  // 起動時に暗騒音キャリブレーション開始
   startNoiseCalibration(analyser);
 
   function classifyVoiceByCatProfile(data) {
@@ -311,27 +309,23 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     if (!noiseProfile.ready) return null;
 
-    // 暗騒音との差分（補正後の値）
     const adjLow = low - noiseProfile.low;
     const adjMid = mid - noiseProfile.mid;
     const adjHigh = high - noiseProfile.high;
     const adjVol = volume - noiseProfile.volume;
 
-    // 長音の終了条件
     if (adjVol < 10) {
       longSoundStart = null;
     }
 
-    // 長音のクールダウン
     if (now - lastLongSoundTime < LONG_SOUND_COOLDOWN) {
       return null;
     }
 
-    // 長音の基本条件（暗騒音補正後）
     const isCatLike =
-      adjVol > 20 &&
-      adjMid > 10 &&
-      adjMid > adjHigh * 0.7;
+      adjVol > 35 &&
+      adjMid > 25 &&
+      adjMid > adjHigh + 15;
 
     if (isCatLike) {
       if (!longSoundStart) longSoundStart = now;
@@ -341,8 +335,6 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       if (duration > 550 && duration < 900) {
         lastLongSoundTime = now;
 
-        if (adjHigh > lastHigh + 5) return "nyao";
-        if (adjHigh < lastHigh - 5) return "nyago";
         if (adjMid > lastMid + 5) return "mya_long";
 
         return "nyan_long";
@@ -354,18 +346,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     lastMid = adjMid;
     lastHigh = adjHigh;
 
-    // 短い猫語
-    if (adjVol > 15 && adjMid > 10 && adjHigh < adjMid && !longSoundStart) {
-      return "nyan_short";
-    }
-
-    // soft
-    if (adjVol < 10 && adjMid > 5 && adjHigh < adjMid) return "soft";
-
-    // harsh
     if (adjVol > 40 && adjHigh > adjMid) return "harsh";
 
-    // catmimic
     if (catProfile.ready) {
       const dLow = Math.abs(low - catProfile.low);
       const dMid = Math.abs(mid - catProfile.mid);
@@ -398,16 +380,15 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（長音対応）
+// 音声による状態遷移（catmimic→Affection）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
   if (currentState === "neutral") {
-    if (type === "soft") setState("attention");
-    if (type === "catmimic") setState("attention");
+    if (type === "catmimic") setState("affection");  // ←復活！
 
-    if (type === "nyan_long" || type === "mya_long" || type === "nyao" || type === "nyago") {
+    if (type === "nyan_long" || type === "mya_long") {
       setState("attention");
     }
 
@@ -416,23 +397,21 @@ function handleVoice(type) {
   }
 
   if (currentState === "approach") {
-    if (type === "soft") setState("attention");
-    if (type === "catmimic") setState("attention");
+    if (type === "catmimic") setState("affection");
 
-    if (type === "nyan_long" || type === "mya_long") setState("affection");
-
-    if (type === "nyao" || type === "nyago") setState("play");
+    if (type === "nyan_long" || type === "mya_long") {
+      setState("affection");
+    }
 
     if (type === "harsh") setState("avoidance");
   }
 
   if (currentState === "attention") {
-    if (type === "soft") setState("affection");
     if (type === "catmimic") setState("affection");
 
-    if (type === "nyan_long" || type === "mya_long") setState("affection");
-
-    if (type === "nyao" || type === "nyago") setState("play");
+    if (type === "nyan_long" || type === "mya_long") {
+      setState("affection");
+    }
 
     if (type === "harsh") setState("avoidance");
   }
@@ -443,7 +422,7 @@ function handleVoice(type) {
 }
 
 // ===============================
-// スワイプ判定
+// スワイプ判定（Play の入口）
 // ===============================
 let swipeStart = null;
 
