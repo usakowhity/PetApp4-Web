@@ -1,13 +1,13 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 反応復活版 main.js（Part 1/2）
+// 長音検出 + 反応復活版 main.js（完全統合版）
 // ===============================
 
 // -------------------------------
 // 定数（EAR安定化）
 // -------------------------------
 const BLINK_EAR_THRESHOLD = 0.15;
-const BLINK_DURATION_MS = 350;   // 少し短くして反応しやすくする
+const BLINK_DURATION_MS = 350;
 
 const NO_INPUT_SLEEP_MS = 10000;
 const STATE_RETURN_MS = 3000;
@@ -167,7 +167,7 @@ async function calibrateCatVoice() {
 calibrateCatVoice();
 
 // ===============================
-// MediaPipe FaceMesh（瞬き検出・反応復活）
+// MediaPipe FaceMesh（瞬き検出）
 // ===============================
 const faceMesh = new FaceMesh({
   locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -195,7 +195,6 @@ faceMesh.onResults(results => {
   }
   prevEAR = EAR;
 
-  // ★ 反応復活：瞬きで attention に入りやすくする
   if (EAR < BLINK_EAR_THRESHOLD) {
     if (!blinkStart) blinkStart = now;
 
@@ -239,7 +238,7 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 // ===============================
-// 音声判定（反応復活版）
+// 音声判定（長音検出統合版）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -249,7 +248,12 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
   const data = new Uint8Array(analyser.frequencyBinCount);
 
-  const CATMIMIC_THRESHOLD = 35;  // ←反応復活のため少し緩める
+  const CATMIMIC_THRESHOLD = 35;
+
+  // 長音検出用
+  let longSoundStart = null;
+  let lastMid = 0;
+  let lastHigh = 0;
 
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
@@ -261,28 +265,71 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const high = avg(highBand);
     const volume = avg(data);
 
-    // ★ 反応復活：soft を復活（Attention の入口）
+    const now = Date.now();
+
+    // -------------------------------
+    // 長音検出（ニャー／ミャー／ニャーオ／ニャーゴ）
+    // -------------------------------
+    const isCatLike =
+      volume > 35 &&
+      mid > low &&
+      mid > high * 0.8;
+
+    if (isCatLike) {
+      if (!longSoundStart) longSoundStart = now;
+
+      const duration = now - longSoundStart;
+
+      if (duration > 300 && duration < 900) {
+
+        if (high > lastHigh + 5) return "nyao";
+        if (high < lastHigh - 5) return "nyago";
+
+        if (mid > lastMid + 5) return "mya_long";
+
+        return "nyan_long";
+      }
+    } else {
+      longSoundStart = null;
+    }
+
+    lastMid = mid;
+    lastHigh = high;
+
+    // -------------------------------
+    // 短い猫語（ニャッ）
+    // -------------------------------
+    if (volume > 35 && mid > low && high < mid && !longSoundStart) {
+      return "nyan_short";
+    }
+
+    // -------------------------------
+    // soft（優しい声）
+    // -------------------------------
     if (volume < 30 && mid > low && high < mid) return "soft";
 
-    // 小さすぎる音は無視
-    if (volume < 35) return null;
-
-    if (!catProfile.ready) return null;
-
-    const dLow = Math.abs(low - catProfile.low);
-    const dMid = Math.abs(mid - catProfile.mid);
-    const dHigh = Math.abs(high - catProfile.high);
-    const dVol = Math.abs(volume - catProfile.volume);
-
-    const distance =
-      dLow * 0.5 +
-      dMid * 1.0 +
-      dHigh * 1.0 +
-      dVol * 0.3;
-
-    if (distance < CATMIMIC_THRESHOLD) return "catmimic";
-
+    // -------------------------------
+    // harsh（強い音）
+    // -------------------------------
     if (volume > 60 && high > mid) return "harsh";
+
+    // -------------------------------
+    // catmimic（猫語に近い声質）
+    // -------------------------------
+    if (catProfile.ready) {
+      const dLow = Math.abs(low - catProfile.low);
+      const dMid = Math.abs(mid - catProfile.mid);
+      const dHigh = Math.abs(high - catProfile.high);
+      const dVol = Math.abs(volume - catProfile.volume);
+
+      const distance =
+        dLow * 0.5 +
+        dMid * 1.0 +
+        dHigh * 1.0 +
+        dVol * 0.3;
+
+      if (distance < CATMIMIC_THRESHOLD) return "catmimic";
+    }
 
     return null;
   }
@@ -301,15 +348,19 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（neutralでも反応復活）
+// 音声による状態遷移（長音対応）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
-  // ★ neutral でも attention に入れるようにする
   if (currentState === "neutral") {
     if (type === "soft") setState("attention");
-    if (type === "catmimic") setState("attention"); // ←AffectionではなくAttention
+    if (type === "catmimic") setState("attention");
+
+    if (type === "nyan_long" || type === "mya_long" || type === "nyao" || type === "nyago") {
+      setState("attention");
+    }
+
     if (type === "harsh") setState("avoidance");
     return;
   }
@@ -317,12 +368,22 @@ function handleVoice(type) {
   if (currentState === "approach") {
     if (type === "soft") setState("attention");
     if (type === "catmimic") setState("attention");
+
+    if (type === "nyan_long" || type === "mya_long") setState("affection");
+
+    if (type === "nyao" || type === "nyago") setState("play");
+
     if (type === "harsh") setState("avoidance");
   }
 
   if (currentState === "attention") {
     if (type === "soft") setState("affection");
     if (type === "catmimic") setState("affection");
+
+    if (type === "nyan_long" || type === "mya_long") setState("affection");
+
+    if (type === "nyao" || type === "nyago") setState("play");
+
     if (type === "harsh") setState("avoidance");
   }
 
@@ -397,3 +458,4 @@ setInterval(() => {
     setState("sleep");
   }
 }, 1000);
+
