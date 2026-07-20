@@ -1,6 +1,6 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 暗騒音キャリブレーション + 長音のみ Attention + catmimic→Affection + Play音声廃止版
+// 暗騒音キャリブレーション + 長音のみ Attention + catmimicは近距離のみ Affection
 // ===============================
 
 // -------------------------------
@@ -274,7 +274,7 @@ function startNoiseCalibration(analyser) {
 }
 
 // ===============================
-// 音声判定（長音のみ Attention + catmimic→Affection）
+// 音声判定（長音のみ Attention）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -380,14 +380,20 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 });
 
 // ===============================
-// 音声による状態遷移（catmimic→Affection）
+// 音声による状態遷移（仕様完全反映）
 // ===============================
 function handleVoice(type) {
   lastInputTime = Date.now();
 
+  // -------------------------------
+  // Neutral（誤発火しても安全）
+  // -------------------------------
   if (currentState === "neutral") {
-    if (type === "catmimic") setState("affection");  // ←復活！
 
+    // catmimic は Attention 止まり
+    if (type === "catmimic") setState("attention");
+
+    // 長音は Attention の入口
     if (type === "nyan_long" || type === "mya_long") {
       setState("attention");
     }
@@ -396,9 +402,15 @@ function handleVoice(type) {
     return;
   }
 
+  // -------------------------------
+  // Approach（近づいている状態）
+  // -------------------------------
   if (currentState === "approach") {
+
+    // 近距離なら catmimic → Affection
     if (type === "catmimic") setState("affection");
 
+    // 長音 → Affection
     if (type === "nyan_long" || type === "mya_long") {
       setState("affection");
     }
@@ -406,7 +418,11 @@ function handleVoice(type) {
     if (type === "harsh") setState("avoidance");
   }
 
+  // -------------------------------
+  // Attention（すでに近い）
+  // -------------------------------
   if (currentState === "attention") {
+
     if (type === "catmimic") setState("affection");
 
     if (type === "nyan_long" || type === "mya_long") {
@@ -416,6 +432,9 @@ function handleVoice(type) {
     if (type === "harsh") setState("avoidance");
   }
 
+  // -------------------------------
+  // Affection
+  // -------------------------------
   if (currentState === "affection") {
     if (type === "harsh") setState("avoidance");
   }
