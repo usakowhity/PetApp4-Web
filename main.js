@@ -377,8 +377,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   startNoiseCalibration(analyser);
 
   // 猫語度の閾値（人間の猫なで声に合わせて調整）
-  const CAT_SPEECH_ATTENTION = 25;   // Attention に入る最低ライン
-  const CAT_SPEECH_AFFECTION = 45;   // Affection に入る猫語度
+  const CAT_SPEECH_ATTENTION = 20;   // Attention に入る最低ライン
+  const CAT_SPEECH_AFFECTION = 35;   // Affection に入る猫語度
 
 
   function classifyVoiceByCatSpeech(data) {
@@ -427,9 +427,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     // 猫語スペクトルの基本条件
     const isCatLikeSpectrum =
-      adjVol > 20 &&
-      adjMid > 15 &&
-      adjMid > adjHigh + 10;
+      adjVol > 15 &&
+      adjMid > 8 &&
+      adjMid > adjHigh + 5;
 
     if (isCatLikeSpectrum) {
 
