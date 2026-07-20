@@ -6,8 +6,8 @@
 // -------------------------------
 // 定数（EAR安定化）
 // -------------------------------
-const BLINK_EAR_THRESHOLD = 0.15;
-const BLINK_DURATION_MS = 350;
+const BLINK_EAR_THRESHOLD = 0.25;   // 0.15 → 0.25 に上げる
+const BLINK_DURATION_MS = 250;      // 350 → 250 に短縮
 
 const NO_INPUT_SLEEP_MS = 10000;
 const STATE_RETURN_MS = 3000;
@@ -377,8 +377,8 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   startNoiseCalibration(analyser);
 
   // 猫語度の閾値（人間の猫なで声に合わせて調整）
-  const CAT_SPEECH_ATTENTION = 20;   // Attention に入る最低ライン
-  const CAT_SPEECH_AFFECTION = 35;   // Affection に入る猫語度
+  const CAT_SPEECH_ATTENTION = 15;   // Attention に入る最低ライン
+  const CAT_SPEECH_AFFECTION = 30;   // Affection に入る猫語度
 
 
   function classifyVoiceByCatSpeech(data) {
@@ -427,9 +427,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     // 猫語スペクトルの基本条件
     const isCatLikeSpectrum =
-      adjVol > 15 &&
-      adjMid > 8 &&
-      adjMid > adjHigh + 5;
+      adjVol > 10 &&
+      adjMid > 5 &&
+      adjMid > adjHigh + 3;
 
     if (isCatLikeSpectrum) {
 
