@@ -1,6 +1,6 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 長音検出 + 反応復活版 main.js（完全統合版）
+// 暗騒音キャリブレーション + 長音検出 + 反応復活版（完全統合）
 // ===============================
 
 // -------------------------------
@@ -238,7 +238,43 @@ const camera = new Camera(videoElement, {
 camera.start();
 
 // ===============================
-// 音声判定（長音検出統合版）
+// 暗騒音キャリブレーション
+// ===============================
+let noiseProfile = { low:0, mid:0, high:0, volume:0, ready:false };
+let noiseSamples = [];
+
+function startNoiseCalibration(analyser) {
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  const start = Date.now();
+
+  function collect() {
+    analyser.getByteFrequencyData(data);
+
+    const low = avg(data.slice(0,50));
+    const mid = avg(data.slice(50,120));
+    const high = avg(data.slice(120,200));
+    const volume = avg(data);
+
+    noiseSamples.push({ low, mid, high, volume });
+
+    if (Date.now() - start < 1000) {
+      requestAnimationFrame(collect);
+    } else {
+      noiseProfile.low = avg(noiseSamples.map(s => s.low));
+      noiseProfile.mid = avg(noiseSamples.map(s => s.mid));
+      noiseProfile.high = avg(noiseSamples.map(s => s.high));
+      noiseProfile.volume = avg(noiseSamples.map(s => s.volume));
+      noiseProfile.ready = true;
+
+      console.log("🔇 暗騒音キャリブレーション完了:", noiseProfile);
+    }
+  }
+
+  collect();
+}
+
+// ===============================
+// 音声判定（暗騒音補正 + 長音検出）
 // ===============================
 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   const audioCtx = new AudioContext();
@@ -255,6 +291,12 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
   let lastLongSoundTime = 0;
   const LONG_SOUND_COOLDOWN = 2000;
 
+  let lastMid = 0;
+  let lastHigh = 0;
+
+  // 起動時に暗騒音キャリブレーション開始
+  startNoiseCalibration(analyser);
+
   function classifyVoiceByCatProfile(data) {
     const lowBand = data.slice(0, 50);
     const midBand = data.slice(50, 120);
@@ -267,8 +309,16 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
 
     const now = Date.now();
 
+    if (!noiseProfile.ready) return null;
+
+    // 暗騒音との差分（補正後の値）
+    const adjLow = low - noiseProfile.low;
+    const adjMid = mid - noiseProfile.mid;
+    const adjHigh = high - noiseProfile.high;
+    const adjVol = volume - noiseProfile.volume;
+
     // 長音の終了条件
-    if (volume < 45) {
+    if (adjVol < 10) {
       longSoundStart = null;
     }
 
@@ -277,11 +327,11 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       return null;
     }
 
-    // 長音の基本条件
+    // 長音の基本条件（暗騒音補正後）
     const isCatLike =
-      volume > 50 &&
-      mid > low &&
-      mid > high * 0.7;
+      adjVol > 20 &&
+      adjMid > 10 &&
+      adjMid > adjHigh * 0.7;
 
     if (isCatLike) {
       if (!longSoundStart) longSoundStart = now;
@@ -291,9 +341,9 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       if (duration > 550 && duration < 900) {
         lastLongSoundTime = now;
 
-        if (high > lastHigh + 5) return "nyao";
-        if (high < lastHigh - 5) return "nyago";
-        if (mid > lastMid + 5) return "mya_long";
+        if (adjHigh > lastHigh + 5) return "nyao";
+        if (adjHigh < lastHigh - 5) return "nyago";
+        if (adjMid > lastMid + 5) return "mya_long";
 
         return "nyan_long";
       }
@@ -301,17 +351,21 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
       longSoundStart = null;
     }
 
-    lastMid = mid;
-    lastHigh = high;
+    lastMid = adjMid;
+    lastHigh = adjHigh;
 
-    if (volume > 35 && mid > low && high < mid && !longSoundStart) {
+    // 短い猫語
+    if (adjVol > 15 && adjMid > 10 && adjHigh < adjMid && !longSoundStart) {
       return "nyan_short";
     }
 
-    if (volume < 30 && mid > low && high < mid) return "soft";
+    // soft
+    if (adjVol < 10 && adjMid > 5 && adjHigh < adjMid) return "soft";
 
-    if (volume > 60 && high > mid) return "harsh";
+    // harsh
+    if (adjVol > 40 && adjHigh > adjMid) return "harsh";
 
+    // catmimic
     if (catProfile.ready) {
       const dLow = Math.abs(low - catProfile.low);
       const dMid = Math.abs(mid - catProfile.mid);
