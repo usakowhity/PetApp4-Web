@@ -1,130 +1,105 @@
-# 🐾 **PetApp4-Web（Myu Edition） — 最新版 README（日本語）**
+# PetApp4-Web (Myu Edition)
 
-PetApp4-Web（Myu Edition）は、静止画ベースの Web ペットアプリです。  
-猫は **瞬き検出（EAR）**、**猫語度（CatSpeechScore）による音声解析**、  
-さらに **スワイプ／マウス操作** に反応して、さまざまな状態に変化します。
-
-また、ユーザーの猫好き度合を判定する **猫語検定機能（世界初／Joke要素あり）** を搭載しています。
+Myu（Domestic Shorthair）が「猫語検定協会会長」として登場する、  
+音声＋瞬き＋マウス操作でコミュニケーションする Web 版 AI ペットアプリです。
 
 ---
 
-## 📁 フォルダ構成（簡略）
+## 特徴
 
-```
-PetApp4-Web/
- ├─ index.html
- ├─ main.js
- ├─ style.css
- ├─ assets/
- │   ├─ images/
- │   └─ audio/
- └─ libs/
-```
+- **猫語キャリブレーション統合版**
+  - Myu の鳴き声（`assets/audio/affection_mew.mp3`）を FFT＋包絡線解析
+  - low / mid / high / volume / duration / envSlope をプロファイル化
+  - これを「猫語検定1級（優等生）」の基準として保存
 
----
+- **猫語度モデル（CatSpeechScore）**
+  - スペクトル距離＋長音の長さ＋包絡線の傾きを統合したスコア
+  - ユーザーの声が Myu のプロファイルに近いほどスコアが高くなる
+  - スコアに応じて Attention / Affection / Avoidance を動的に遷移
 
-## 🐾 主な機能
+- **PC／スマホ自動切替**
+  - `navigator.userAgent` による簡易判定
+  - 瞬き判定（EAR閾値・時間）を PC／スマホで自動調整
+  - 猫語度の閾値（Attention / Affection）も端末に応じて最適化
 
----
+- **MediaPipe FaceMesh による瞬き検出**
+  - 目の縦横比（EAR）を計算し、ゆっくり瞬きで Approach → Attention → Affection
+  - まばたきの安定性を考慮したフィルタリング（prevEAR）
 
-## 1. 瞬き検出（EAR）
-MediaPipe FaceMesh を使用し、  
-**ゆっくり瞬き → Approach（近づく）**  
-**連続したゆっくり瞬き → Attention → Affection（甘える）**  
-という自然な猫の反応を再現しています。
+- **暗騒音キャリブレーション**
+  - 起動直後に周囲の環境音を 1 秒間サンプリング
+  - low / mid / high / volume の平均値をノイズプロファイルとして保存
+  - 以降の音声解析ではこのノイズを差し引いて猫語度を計算
 
-EAR（目の縦横比）が一定時間しきい値を下回ることで「ゆっくり瞬き」を検出します。
-
----
-
-## 2. 音声トリガー（猫語度ベースの新判定）
-
-### ■ 猫語キャリブレーション（統合特徴版）
-起動時に本物の猫の鳴き声を解析し、以下の特徴を抽出します：
-
-- **音質（low / mid / high / volume）**  
-- **長音の持続時間（durationMs）**  
-- **包絡線の立ち上がり（envSlope）**
-
-これらを統合して **猫語プロファイル** を生成します。
+- **インタラクション**
+  - 長音の猫なで声 → Attention / Affection
+  - harsh（高音＋大音量） → Avoidance
+  - スワイプ／高速マウス移動 → Play
+  - 無操作 10 秒 → Sleep → Stretch → Neutral
 
 ---
 
-### ■ 猫語度（CatSpeechScore）
-ユーザーの声をリアルタイム解析し、  
-猫語プロファイルとの類似度から **0〜100 の猫語度スコア** を算出します。
+## フォルダ構成
 
-| 猫語度 | 判定 | 状態遷移 |
-|--------|------|----------|
-| **≥ 30** | cat_speech_strong | Affection（甘える） |
-| **≥ 15** | cat_speech_weak | Attention（注目） |
-| **< 15** | — | 無反応 |
+- `index.html`  
+  - アプリ本体のエントリポイント
+  - MediaPipe FaceMesh の CDN 読み込み
+  - `main.js` の読み込み
 
----
+- `main.js`  
+  - 猫語キャリブレーション統合版（音質＋長音特性）
+  - 猫語度モデル（CatSpeechScore）
+  - PC／スマホ切替ロジック
+  - MediaPipe FaceMesh による瞬き検出
+  - 音声解析・状態遷移・インタラクション
 
-### ■ 長音検出（補助判定）
-猫語度が低くても、  
-「ニャー」「ミャー」などの **長音（300〜900ms）** が成立した場合は  
-Attention／Affection の補助トリガーとして扱います。
+- `style.css`  
+  - Myu の表示レイアウト
+  - 猫語検定表示（級・肉球）
 
----
+- `assets/images/`  
+  - `myu_neutral.png`  
+  - `myu_approach.png`  
+  - `myu_attention.png`  
+  - `myu_affection.png`  
+  - `myu_avoidance.png`  
+  - `myu_play.png`  
+  - `myu_ignore.png`  
+  - `myu_sleep.png`  
+  - `myu_stretch.png`
 
-## 3. スワイプ／マウス操作
-- ゆっくりスワイプ → **Affection（甘える）**  
-- 早いスワイプ → **Play（遊ぶ）**  
-- マウス高速移動 → **Play（遊ぶ）**  
-- 画面タップ → **Avoidance（避ける）**
-
----
-
-## 4. 自然な睡眠遷移
-10秒間無操作で **Sleep（眠る）** に入り、  
-その後自動で以下の流れになります：
-
-```
-Sleep（7秒）
-↓
-Stretch（2秒）
-↓
-Neutral（通常）
-```
+- `assets/audio/`  
+  - `affection_mew.mp3`（Myu の鳴き声：キャリブレーション＋Affection演出）
 
 ---
 
-## 5. 猫語検定（世界初／Joke要素）
-ユーザーの行動（瞬き／猫語／声／スワイプ）に応じて  
-**猫語検定ランク（1〜5級）** が上下します。
+## 動作概要
 
-- 甘える行動 → ランク上昇  
-- 避ける行動 → ランク下降  
+1. 起動時
+   - 暗騒音キャリブレーション開始
+   - Myu の鳴き声を解析して猫語プロファイルを生成
+   - 初期状態は `neutral`
 
-ランクは画面上部に **大きな肉球印🐾** とともに表示されます。
+2. ユーザーの音声入力
+   - FFT＋ノイズ補正＋包絡線解析
+   - 猫語度スコアを計算
+   - `cat_speech_weak` / `cat_speech_strong` / `nyan_long` / `harsh` に分類
+   - 状態遷移（Attention / Affection / Avoidance）
+
+3. 瞬き・マウス・スワイプ
+   - ゆっくり瞬き → Approach → Attention → Affection
+   - スワイプ／高速マウス → Play
+   - harsh → Avoidance
+
+4. 無操作
+   - 10 秒間入力がない場合、Sleep → Stretch → Neutral
 
 ---
 
-## 🐾 状態遷移（最新版）
+## ライセンス・クレジット
 
-### Neutral → Attention
-- 猫語度 ≥ **15**  
-- 長音（nyan_long / mya_long）
-
-### Approach → Attention
-- ゆっくり瞬き
-
-### Approach → Affection
-- 猫語度 ≥ **30**  
-- 長音（nyan_long / mya_long）
-
-### Attention → Affection
-- 猫語度 ≥ **30**  
-- 長音（nyan_long / mya_long）
-
-### **Any State → Avoidance**
-- harsh（高音＋大音量）
-
-### Neutral → Play
-- 高速スワイプ  
-- 高速マウス移動
-
-### Neutral → Sleep
-- 無操作 10 秒
+- MediaPipe FaceMesh / CameraUtils  
+  - Google / MediaPipe によるライブラリを使用（CDN経由）
+- Myu（Domestic Shorthair）  
+  - PetApp4-Web（Myu Edition）の主役  
+  - 猫語検定協会会長として世界観を構成

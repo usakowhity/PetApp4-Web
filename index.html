@@ -22,30 +22,12 @@
       <div id="points">猫語検定 5級 <span class="paws">🐾</span></div>
     </div>
 
-    <!-- FaceMesh用ビデオ（非表示扱い） -->
-    <video id="video" autoplay playsinline
-           style="width:1px;height:1px;opacity:0;position:absolute;left:-9999px;"></video>
-
-    <!-- Myu画像 -->
     <div id="cat-box">
-      <img id="myu" src="assets/images/myu_neutral.png" alt="Myu">
+      <img id="pet-image" src="assets/images/myu_neutral.png" alt="Myu">
     </div>
-
-    <!-- 共通猫鳴き（キャリブレーション＋Affection） -->
-    <audio id="cat_mew_audio" src="assets/audio/cat_mew.wav"></audio>
 
   </div>
 
-  <script src="main.js" defer></script>
-
-  <script>
-    window.addEventListener("DOMContentLoaded", () => {
-      setState("neutral");
-      startFaceMesh();
-      startAudio();
-      calibrateCatVoice();   // ★ キャリブレーション開始（解析のみ）
-    });
-  </script>
-
+  <script src="main.js"></script>
 </body>
 </html>
