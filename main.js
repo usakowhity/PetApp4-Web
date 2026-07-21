@@ -359,7 +359,6 @@ function computeCatSpeechScore(features) {
 
   return catSpeechScore;
 }
-
 // ===============================
 // 音声判定（猫語度ベース）
 // ===============================
@@ -603,4 +602,3 @@ setInterval(() => {
     setState("sleep");
   }
 }, 1000);
-```
