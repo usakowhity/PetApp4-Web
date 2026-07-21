@@ -1,37 +1,67 @@
 // ===============================
 // PetApp4-Web (Myu Edition)
-// 猫語キャリブレーション統合版（音質＋長音特性）
+// PC / Mobile Auto-Switch Version
 // ===============================
 
-// -------------------------------
-// 定数（EAR安定化）
-// -------------------------------
-const BLINK_EAR_THRESHOLD = 0.25;   // 0.15 → 0.25 に上げる
-const BLINK_DURATION_MS = 250;      // 350 → 250 に短縮
+// ===============================
+// Device Detection (PC / Smartphone)
+// ===============================
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-const NO_INPUT_SLEEP_MS = 10000;
-const STATE_RETURN_MS = 3000;
+// ===============================
+// Parameter Presets (PC / Mobile)
+// ===============================
 
-const SLEEP_DURATION_MS = 7000;
-const STRETCH_DURATION_MS = 2000;
+// PC
+const BLINK_EAR_THRESHOLD_PC = 0.25;
+const BLINK_DURATION_MS_PC = 250;
 
-// -------------------------------
-// 状態管理
-// -------------------------------
+const CAT_SPEECH_ATTENTION_PC = 15;
+const CAT_SPEECH_AFFECTION_PC = 30;
+
+const SPECTRUM_VOL_PC = 10;
+const SPECTRUM_MID_PC = 5;
+const SPECTRUM_DIFF_PC = 3;
+
+// Mobile
+const BLINK_EAR_THRESHOLD_MOBILE = 0.18;
+const BLINK_DURATION_MS_MOBILE = 350;
+
+const CAT_SPEECH_ATTENTION_MOBILE = 20;
+const CAT_SPEECH_AFFECTION_MOBILE = 35;
+
+const SPECTRUM_VOL_MOBILE = 15;
+const SPECTRUM_MID_MOBILE = 8;
+const SPECTRUM_DIFF_MOBILE = 5;
+
+// Noise calibration time
+const NOISE_CALIBRATION_TIME = isMobile ? 2000 : 1000;
+
+// ===============================
+// Active Parameters (Auto Switch)
+// ===============================
+const BLINK_EAR_THRESHOLD = isMobile ? BLINK_EAR_THRESHOLD_MOBILE : BLINK_EAR_THRESHOLD_PC;
+const BLINK_DURATION_MS = isMobile ? BLINK_DURATION_MS_MOBILE : BLINK_DURATION_MS_PC;
+
+const CAT_SPEECH_ATTENTION = isMobile ? CAT_SPEECH_ATTENTION_MOBILE : CAT_SPEECH_ATTENTION_PC;
+const CAT_SPEECH_AFFECTION = isMobile ? CAT_SPEECH_AFFECTION_MOBILE : CAT_SPEECH_AFFECTION_PC;
+
+const SPECTRUM_VOL = isMobile ? SPECTRUM_VOL_MOBILE : SPECTRUM_VOL_PC;
+const SPECTRUM_MID = isMobile ? SPECTRUM_MID_MOBILE : SPECTRUM_MID_PC;
+const SPECTRUM_DIFF = isMobile ? SPECTRUM_DIFF_MOBILE : SPECTRUM_DIFF_PC;
+
+// ===============================
+// State Management
+// ===============================
 let currentState = "neutral";
 let lastInputTime = Date.now();
 let blinkStart = null;
 let stateTimer = null;
 
-// -------------------------------
-// Affection クールダウン
-// -------------------------------
 let lastAffectionTime = 0;
 const AFFECTION_COOLDOWN_MS = 4000;
 
-// -------------------------------
-// 猫語検定ランク管理
-// -------------------------------
+// 猫語検定
 let catRank = 5;
 let catScore = 0;
 
@@ -52,10 +82,9 @@ function updateCatRank(change) {
   const points = document.getElementById("points");
   points.innerHTML = `猫語検定 ${catRank}級 <span class="paws">${paws}</span>`;
 }
-
-// -------------------------------
-// 画像セット
-// -------------------------------
+// ===============================
+// Image Set (Myu States)
+// ===============================
 const images = {
   neutral: "assets/images/myu_neutral.png",
   approach: "assets/images/myu_approach.png",
@@ -63,259 +92,169 @@ const images = {
   affection: "assets/images/myu_affection.png",
   avoidance: "assets/images/myu_avoidance.png",
   play: "assets/images/myu_play.png",
-  ignore: "assets/images/myu_ignore.png",
   sleep: "assets/images/myu_sleep.png",
   stretch: "assets/images/myu_stretch.png"
 };
 
-function setImage(state) {
-  const img = document.getElementById("pet-image");
-  img.src = images[state];
-}
+const myuImg = document.getElementById("myu");
 
-// -------------------------------
-// 状態変更
-// -------------------------------
+// ===============================
+// State Transition Handler
+// ===============================
 function setState(newState) {
-  const now = Date.now();
 
-  if (newState === "affection" && now - lastAffectionTime < AFFECTION_COOLDOWN_MS) {
+  // Sleep → Stretch → Neutral の自動遷移
+  if (newState === "sleep") {
+    currentState = "sleep";
+    myuImg.src = images.sleep;
+
+    clearTimeout(stateTimer);
+    stateTimer = setTimeout(() => {
+      currentState = "stretch";
+      myuImg.src = images.stretch;
+
+      stateTimer = setTimeout(() => {
+        currentState = "neutral";
+        myuImg.src = images.neutral;
+      }, 2000);
+
+    }, 7000);
+
     return;
   }
 
-  if (currentState === newState) return;
+  // harsh（高音＋大音量）は全状態 → Avoidance
+  if (newState === "avoidance") {
+    currentState = "avoidance";
+    myuImg.src = images.avoidance;
 
-  currentState = newState;
-  setImage(newState);
-  lastInputTime = now;
-  clearTimeout(stateTimer);
+    updateCatRank(-5); // 猫語検定ランク下降
 
+    // 3秒後に Neutral に戻す
+    clearTimeout(stateTimer);
+    stateTimer = setTimeout(() => {
+      currentState = "neutral";
+      myuImg.src = images.neutral;
+    }, 3000);
+
+    return;
+  }
+
+  // Play（高速スワイプ／高速マウス）
+  if (newState === "play") {
+    currentState = "play";
+    myuImg.src = images.play;
+
+    updateCatRank(+2);
+
+    clearTimeout(stateTimer);
+    stateTimer = setTimeout(() => {
+      currentState = "neutral";
+      myuImg.src = images.neutral;
+    }, 2500);
+
+    return;
+  }
+
+  // Approach（ゆっくり瞬き）
+  if (newState === "approach") {
+    currentState = "approach";
+    myuImg.src = images.approach;
+
+    updateCatRank(+1);
+
+    return;
+  }
+
+  // Attention（弱い猫語）
+  if (newState === "attention") {
+    currentState = "attention";
+    myuImg.src = images.attention;
+
+    updateCatRank(+2);
+
+    return;
+  }
+
+  // Affection（強い猫語）
   if (newState === "affection") {
+
+    // クールダウン（連続甘え防止）
+    const now = Date.now();
+    if (now - lastAffectionTime < AFFECTION_COOLDOWN_MS) return;
     lastAffectionTime = now;
 
-    const audio = new Audio("assets/audio/affection_mew.mp3");
-    audio.currentTime = 0;
-    audio.play();
+    currentState = "affection";
+    myuImg.src = images.affection;
 
-    updateCatRank(+5);
-  }
+    updateCatRank(+3);
 
-  if (newState === "avoidance") {
-    updateCatRank(-3);
-  }
-
-  if (newState === "sleep") {
+    clearTimeout(stateTimer);
     stateTimer = setTimeout(() => {
-      setState("stretch");
-      stateTimer = setTimeout(() => {
-        setState("neutral");
-      }, STRETCH_DURATION_MS);
-    }, SLEEP_DURATION_MS);
+      currentState = "neutral";
+      myuImg.src = images.neutral;
+    }, 4000);
+
     return;
   }
 
-  if (newState !== "neutral") {
-    stateTimer = setTimeout(() => {
-      setState("neutral");
-    }, STATE_RETURN_MS);
+  // Neutral（通常）
+  if (newState === "neutral") {
+    currentState = "neutral";
+    myuImg.src = images.neutral;
+    return;
   }
 }
+// ===============================
+// Cat Voice Calibration (Integrated Features)
+// ===============================
 
-// ===============================
-// 猫語キャリブレーション（音質＋長音特性）
-// ===============================
-const CAT_VOICE_URL = "assets/audio/affection_mew.mp3";
+let noiseProfile = {
+  low: 0,
+  mid: 0,
+  high: 0,
+  volume: 0,
+  ready: false
+};
 
 let catProfile = {
   low: 0,
   mid: 0,
   high: 0,
   volume: 0,
-  avgDurationMs: 700,
+  durationMs: 0,
   envSlope: 0,
   ready: false
 };
 
-const calibAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-function avg(arr) {
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
-async function calibrateCatVoice() {
-  const response = await fetch(CAT_VOICE_URL);
-  const arrayBuffer = await response.arrayBuffer();
-  const audioBuffer = await calibAudioCtx.decodeAudioData(arrayBuffer);
-
-  const offlineCtx = new OfflineAudioContext(1, audioBuffer.length, audioBuffer.sampleRate);
-  const source = offlineCtx.createBufferSource();
-  source.buffer = audioBuffer;
-
-  const analyser = offlineCtx.createAnalyser();
-  analyser.fftSize = 2048;
-
-  source.connect(analyser);
-  analyser.connect(offlineCtx.destination);
-  source.start(0);
-
-  const freqData = new Uint8Array(analyser.frequencyBinCount);
-
-  const channelData = audioBuffer.getChannelData(0);
-  const sampleRate = audioBuffer.sampleRate;
-
-  offlineCtx.startRendering().then(() => {
-    analyser.getByteFrequencyData(freqData);
-
-    const low = avg(freqData.slice(0, 50));
-    const mid = avg(freqData.slice(50, 120));
-    const high = avg(freqData.slice(120, 200));
-    const volume = avg(freqData);
-
-    let env = [];
-    const step = Math.floor(sampleRate * 0.01);
-    for (let i = 0; i < channelData.length; i += step) {
-      let sum = 0;
-      for (let j = i; j < i + step && j < channelData.length; j++) {
-        sum += Math.abs(channelData[j]);
-      }
-      env.push(sum / step);
-    }
-
-    const envMax = Math.max(...env);
-    const envThresh = envMax * 0.3;
-
-    let startIdx = null;
-    let endIdx = null;
-    for (let i = 0; i < env.length; i++) {
-      if (env[i] > envThresh && startIdx === null) startIdx = i;
-      if (env[i] > envThresh) endIdx = i;
-    }
-
-    let durationMs = 700;
-    let slope = 0;
-    if (startIdx !== null && endIdx !== null && endIdx > startIdx) {
-      durationMs = (endIdx - startIdx) * 10;
-      const riseRange = env.slice(startIdx, startIdx + Math.floor((endIdx - startIdx) / 2));
-      if (riseRange.length > 1) {
-        slope = (riseRange[riseRange.length - 1] - riseRange[0]) / riseRange.length;
-      }
-    }
-
-    catProfile.low = low;
-    catProfile.mid = mid;
-    catProfile.high = high;
-    catProfile.volume = volume;
-    catProfile.avgDurationMs = durationMs;
-    catProfile.envSlope = slope;
-    catProfile.ready = true;
-
-    console.log("🐾 猫語キャリブレーション完了:", catProfile);
-  });
-}
-
-calibrateCatVoice();
-
 // ===============================
-// MediaPipe FaceMesh（瞬き検出）
+// Noise Calibration (PC / Mobile Auto-Time)
 // ===============================
-const faceMesh = new FaceMesh({
-  locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-});
-
-faceMesh.setOptions({
-  maxNumFaces: 1,
-  refineLandmarks: true
-});
-
-let prevEAR = null;
-
-faceMesh.onResults(results => {
-  if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) return;
-
-  const lm = results.multiFaceLandmarks[0];
-  const EAR = calcEAR(lm[159], lm[145], lm[33], lm[133]);
-  const now = Date.now();
-
-  if (EAR < 0.05 || EAR > 0.5) return;
-
-  if (prevEAR !== null && Math.abs(EAR - prevEAR) < 0.01) {
-    prevEAR = EAR;
-    return;
-  }
-  prevEAR = EAR;
-
-  if (EAR < BLINK_EAR_THRESHOLD) {
-    if (!blinkStart) blinkStart = now;
-
-    if (now - blinkStart > BLINK_DURATION_MS) {
-      if (currentState === "neutral") setState("approach");
-      else if (currentState === "approach") setState("attention");
-      else if (currentState === "attention") setState("affection");
-    }
-  } else {
-    blinkStart = null;
-  }
-
-  lastInputTime = now;
-});
-
-function calcEAR(top, bottom, left, right) {
-  const v = distance(top, bottom);
-  const h = distance(left, right);
-  return v / h;
-}
-
-function distance(a, b) {
-  return Math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2);
-}
-
-// ===============================
-// カメラ入力開始
-// ===============================
-const videoElement = document.createElement("video");
-videoElement.style.display = "none";
-document.body.appendChild(videoElement);
-
-const camera = new Camera(videoElement, {
-  onFrame: async () => {
-    await faceMesh.send({ image: videoElement });
-  },
-  width: 640,
-  height: 480
-});
-
-camera.start();
-
-// ===============================
-// 暗騒音キャリブレーション
-// ===============================
-let noiseProfile = { low:0, mid:0, high:0, volume:0, ready:false };
-let noiseSamples = [];
-
 function startNoiseCalibration(analyser) {
-  const data = new Uint8Array(analyser.frequencyBinCount);
-  const start = Date.now();
+  let start = Date.now();
+  let samples = [];
 
   function collect() {
+    const data = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(data);
 
-    const low = avg(data.slice(0,50));
-    const mid = avg(data.slice(50,120));
-    const high = avg(data.slice(120,200));
-    const volume = avg(data);
+    samples.push({
+      low: avg(data.slice(0, 50)),
+      mid: avg(data.slice(50, 120)),
+      high: avg(data.slice(120, 200)),
+      volume: avg(data)
+    });
 
-    noiseSamples.push({ low, mid, high, volume });
-
-    if (Date.now() - start < 1000) {
+    if (Date.now() - start < NOISE_CALIBRATION_TIME) {
       requestAnimationFrame(collect);
     } else {
-      noiseProfile.low = avg(noiseSamples.map(s => s.low));
-      noiseProfile.mid = avg(noiseSamples.map(s => s.mid));
-      noiseProfile.high = avg(noiseSamples.map(s => s.high));
-      noiseProfile.volume = avg(noiseSamples.map(s => s.volume));
+      noiseProfile.low = avg(samples.map(s => s.low));
+      noiseProfile.mid = avg(samples.map(s => s.mid));
+      noiseProfile.high = avg(samples.map(s => s.high));
+      noiseProfile.volume = avg(samples.map(s => s.volume));
       noiseProfile.ready = true;
 
-      console.log("🔇 暗騒音キャリブレーション完了:", noiseProfile);
+      console.log("暗騒音キャリブレーション完了:", noiseProfile);
     }
   }
 
@@ -323,294 +262,436 @@ function startNoiseCalibration(analyser) {
 }
 
 // ===============================
-// 猫語度（CatSpeechScore）
+// Cat Voice Calibration (Real Meow Sample)
+// ===============================
+function startCatCalibration() {
+  const audio = document.getElementById("cat_mew_audio");
+  const ctx = new AudioContext();
+  const src = ctx.createMediaElementSource(audio);
+  const analyser = ctx.createAnalyser();
+  src.connect(analyser);
+  analyser.connect(ctx.destination);
+
+  analyser.fftSize = 2048;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+
+  let env = [];
+  let start = null;
+
+  audio.play();
+
+  function analyze() {
+    analyser.getByteFrequencyData(data);
+
+    const vol = avg(data);
+    if (vol > 20 && !start) start = Date.now();
+
+    if (start) env.push(vol);
+
+    if (!audio.paused) {
+      requestAnimationFrame(analyze);
+      return;
+    }
+
+    const durationMs = Date.now() - start;
+    const envSlope = (env[env.length - 1] - env[0]) / env.length;
+
+    catProfile.low = avg(data.slice(0, 50));
+    catProfile.mid = avg(data.slice(50, 120));
+    catProfile.high = avg(data.slice(120, 200));
+    catProfile.volume = vol;
+    catProfile.durationMs = durationMs;
+    catProfile.envSlope = envSlope;
+    catProfile.ready = true;
+
+    console.log("猫語キャリブレーション完了:", catProfile);
+  }
+
+  analyze();
+}
+
+// ===============================
+// CatSpeechScore (Similarity Calculation)
 // ===============================
 function computeCatSpeechScore(features) {
-  if (!catProfile.ready) return 0;
+  const wLow = 0.8;
+  const wMid = 1.2;
+  const wHigh = 0.6;
+  const wVol = 1.0;
+  const wDur = 1.0;
+  const wSlope = 1.0;
 
   const dLow = Math.abs(features.low - catProfile.low);
   const dMid = Math.abs(features.mid - catProfile.mid);
   const dHigh = Math.abs(features.high - catProfile.high);
   const dVol = Math.abs(features.volume - catProfile.volume);
-
-  const spectralDistance =
-    dLow * 0.5 +
-    dMid * 1.0 +
-    dHigh * 1.0 +
-    dVol * 0.3;
-
-  const spectralScore = Math.max(0, 100 - spectralDistance);
-
-  const dDur = Math.abs(features.durationMs - catProfile.avgDurationMs);
-  const durationScore = Math.max(0, 100 - dDur * 0.1);
-
+  const dDur = Math.abs(features.durationMs - catProfile.durationMs);
   const dSlope = Math.abs(features.envSlope - catProfile.envSlope);
-  const slopeScore = Math.max(0, 100 - dSlope * 300);
 
-  const catSpeechScore =
-    spectralScore * 0.5 +
-    durationScore * 0.3 +
-    slopeScore * 0.2;
+  const score =
+    100 -
+    (dLow * wLow +
+     dMid * wMid +
+     dHigh * wHigh +
+     dVol * wVol +
+     dDur * wDur +
+     dSlope * wSlope);
 
-  return catSpeechScore;
+  return Math.max(0, Math.min(100, score));
+}
+// ===============================
+// FaceMesh (Blink Detection)
+// ===============================
+
+let faceMesh;
+let video;
+let lastEAR = 0;
+
+// EAR 計算（目の縦横比）
+function computeEAR(landmarks) {
+  const leftEye = [
+    landmarks[33], landmarks[160], landmarks[158],
+    landmarks[133], landmarks[153], landmarks[144]
+  ];
+
+  const rightEye = [
+    landmarks[362], landmarks[385], landmarks[387],
+    landmarks[263], landmarks[373], landmarks[380]
+  ];
+
+  function ear(eye) {
+    const A = distance(eye[1], eye[5]);
+    const B = distance(eye[2], eye[4]);
+    const C = distance(eye[0], eye[3]);
+    return (A + B) / (2.0 * C);
+  }
+
+  return (ear(leftEye) + ear(rightEye)) / 2.0;
+}
+
+// 距離計算
+function distance(a, b) {
+  return Math.sqrt(
+    (a.x - b.x) ** 2 +
+    (a.y - b.y) ** 2 +
+    (a.z - b.z) ** 2
+  );
 }
 
 // ===============================
-// 音声判定（猫語度ベース）
+// Blink Detection Loop
 // ===============================
-navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-  const audioCtx = new AudioContext();
-  const analyser = audioCtx.createAnalyser();
-  const source = audioCtx.createMediaStreamSource(stream);
-  source.connect(analyser);
+function startFaceMesh() {
+  video = document.getElementById("video");
 
-  analyser.fftSize = 2048;
-  const data = new Uint8Array(analyser.frequencyBinCount);
+  faceMesh = new FaceMesh({
+    locateFile: (file) => `libs/${file}`
+  });
 
-  let longSoundStart = null;
-  let lastLongSoundTime = 0;
-  const LONG_SOUND_COOLDOWN = 2000;
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
 
-  let lastEnv = [];
+  faceMesh.onResults(onFaceResults);
 
-  // 暗騒音キャリブレーション開始
-  startNoiseCalibration(analyser);
+  const camera = new Camera(video, {
+    onFrame: async () => {
+      await faceMesh.send({ image: video });
+    },
+    width: 640,
+    height: 480
+  });
 
-  // 猫語度の閾値（人間の猫なで声に合わせて調整）
-  const CAT_SPEECH_ATTENTION = 15;   // Attention に入る最低ライン
-  const CAT_SPEECH_AFFECTION = 30;   // Affection に入る猫語度
-
-
-  function classifyVoiceByCatSpeech(data) {
-
-    // 周波数帯域の抽出
-    const lowBand  = data.slice(0, 50);
-    const midBand  = data.slice(50, 120);
-    const highBand = data.slice(120, 200);
-
-    const low    = avg(lowBand);
-    const mid    = avg(midBand);
-    const high   = avg(highBand);
-    const volume = avg(data);
-
-    const now = Date.now();
-
-    // キャリブレーション未完了なら判定しない
-    if (!noiseProfile.ready || !catProfile.ready) return null;
-
-    // 暗騒音補正
-    const adjLow  = low    - noiseProfile.low;
-    const adjMid  = mid    - noiseProfile.mid;
-    const adjHigh = high   - noiseProfile.high;
-    const adjVol  = volume - noiseProfile.volume;
-
-    // 音量が小さすぎる → 無視
-    if (adjVol < 10) {
-      longSoundStart = null;
-      lastEnv = [];
-      return null;
-    }
-
-    // 長音クールダウン
-    if (now - lastLongSoundTime < LONG_SOUND_COOLDOWN) {
-      return null;
-    }
-
-    // 包絡線（音量の時間変化）
-    lastEnv.push(adjVol);
-    if (lastEnv.length > 50) lastEnv.shift(); // 約0.5秒分
-
-    let envSlope = 0;
-    if (lastEnv.length > 5) {
-      envSlope = (lastEnv[lastEnv.length - 1] - lastEnv[0]) / lastEnv.length;
-    }
-
-    // 猫語スペクトルの基本条件
-    const isCatLikeSpectrum =
-      adjVol > 10 &&
-      adjMid > 5 &&
-      adjMid > adjHigh + 3;
-
-    if (isCatLikeSpectrum) {
-
-      // 長音開始
-      if (!longSoundStart) longSoundStart = now;
-
-      const durationMs = now - longSoundStart;
-
-      // 長音の範囲
-      if (durationMs > 300 && durationMs < 1200) {
-
-        // 特徴量セット
-        const features = {
-          low: low,
-          mid: mid,
-          high: high,
-          volume: volume,
-          durationMs: durationMs,
-          envSlope: envSlope
-        };
-
-        // 猫語度スコア
-        const score = computeCatSpeechScore(features);
-
-        // 強い猫語 → Affection
-        if (score >= CAT_SPEECH_AFFECTION) {
-          lastLongSoundTime = now;
-          longSoundStart = null;
-          lastEnv = [];
-          return "cat_speech_strong";
-        }
-
-        // 弱い猫語 → Attention
-        if (score >= CAT_SPEECH_ATTENTION) {
-          lastLongSoundTime = now;
-          longSoundStart = null;
-          lastEnv = [];
-          return "cat_speech_weak";
-        }
-
-        // 猫語度は低いが長音として成立
-        if (durationMs > 550 && durationMs < 900) {
-          lastLongSoundTime = now;
-          longSoundStart = null;
-          lastEnv = [];
-          return "nyan_long";
-        }
-      }
-
-    } else {
-      longSoundStart = null;
-    }
-
-    // harsh（高音＋大音量）
-    if (adjVol > 40 && adjHigh > adjMid) return "harsh";
-
-    return null;
-  }
-
-
-  function analyze() {
-    analyser.getByteFrequencyData(data);
-
-    const type = classifyVoiceByCatSpeech(data);
-
-    if (type) handleVoice(type);
-
-    requestAnimationFrame(analyze);
-  }
-
-  analyze();
-});
+  camera.start();
+}
 
 // ===============================
-// 音声による状態遷移（猫語度ベース）
+// FaceMesh Callback
 // ===============================
-function handleVoice(type) {
-  lastInputTime = Date.now();
-
-  if (currentState === "neutral") {
-
-    if (type === "cat_speech_weak") setState("attention");
-
-    if (type === "nyan_long") {
-      setState("attention");
-    }
-
-    if (type === "harsh") setState("avoidance");
+function onFaceResults(results) {
+  if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+    blinkStart = null;
     return;
   }
 
-  if (currentState === "approach") {
+  const landmarks = results.multiFaceLandmarks[0];
+  const EAR = computeEAR(landmarks);
+  lastEAR = EAR;
 
-    if (type === "cat_speech_strong") setState("affection");
+  const now = Date.now();
 
-    if (type === "nyan_long") {
-      setState("affection");
+  // ===============================
+  // Blink Detection (PC / Mobile Auto-Switch)
+  // ===============================
+  if (EAR < BLINK_EAR_THRESHOLD) {
+
+    if (!blinkStart) blinkStart = now;
+
+    // ゆっくり瞬き判定
+    if (now - blinkStart > BLINK_DURATION_MS) {
+
+      // Neutral → Approach
+      if (currentState === "neutral") {
+        setState("approach");
+      }
+
+      // Approach → Attention
+      else if (currentState === "approach") {
+        setState("attention");
+      }
+
+      // Attention → Affection
+      else if (currentState === "attention") {
+        setState("affection");
+      }
+
+      blinkStart = null;
     }
 
-    if (type === "harsh") setState("avoidance");
+  } else {
+    blinkStart = null;
   }
+}
+// ===============================
+// Audio Processing (CatSpeechScore + Mobile Optimization)
+// ===============================
 
-  if (currentState === "attention") {
+let audioCtx;
+let analyser;
+let micStream;
 
-    if (type === "cat_speech_strong") setState("affection");
+let prevVol = 0;
+let envStart = null;
+let envValues = [];
 
-    if (type === "nyan_long") {
-      setState("affection");
-    }
+// ===============================
+// Start Microphone
+// ===============================
+async function startAudio() {
+  audioCtx = new AudioContext();
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-    if (type === "harsh") setState("avoidance");
-  }
+  const src = audioCtx.createMediaStreamSource(micStream);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
 
-  if (currentState === "affection") {
-    if (type === "harsh") setState("avoidance");
-  }
+  src.connect(analyser);
+
+  startNoiseCalibration(analyser);
+  audioLoop();
 }
 
 // ===============================
-// スワイプ判定（Play の入口）
+// Audio Loop
 // ===============================
-let swipeStart = null;
+function audioLoop() {
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
 
-window.addEventListener("mousedown", e => {
-  swipeStart = { x: e.clientX, time: Date.now() };
-  lastInputTime = Date.now();
+  const low = avg(data.slice(0, 50));
+  const mid = avg(data.slice(50, 120));
+  const high = avg(data.slice(120, 200));
+  const volume = avg(data);
 
-  if (currentState !== "sleep") {
-    setState("avoidance");
-  }
-});
+  const adjLow = Math.max(0, low - noiseProfile.low);
+  const adjMid = Math.max(0, mid - noiseProfile.mid);
+  const adjHigh = Math.max(0, high - noiseProfile.high);
+  const adjVol = Math.max(0, volume - noiseProfile.volume);
 
-window.addEventListener("mouseup", e => {
-  if (!swipeStart) return;
-
-  const dx = Math.abs(e.clientX - swipeStart.x);
-  const dt = Date.now() - swipeStart.time;
-
-  const speed = dx / dt;
-
-  if (speed < 0.3) {
-    if (currentState === "attention") setState("affection");
+  // ===============================
+  // Envelope Tracking (Long Meow Detection)
+  // ===============================
+  if (adjVol > 10) {
+    if (!envStart) envStart = Date.now();
+    envValues.push(adjVol);
   } else {
-    if (currentState === "neutral") setState("play");
+    if (envStart) {
+      const durationMs = Date.now() - envStart;
+      const envSlope = (envValues[envValues.length - 1] - envValues[0]) / envValues.length;
+
+      const features = {
+        low: adjLow,
+        mid: adjMid,
+        high: adjHigh,
+        volume: adjVol,
+        durationMs,
+        envSlope
+      };
+
+      if (catProfile.ready) {
+        const score = computeCatSpeechScore(features);
+        const type = classifyVoiceByCatSpeech(score, features);
+        handleVoiceType(type);
+      }
+    }
+
+    envStart = null;
+    envValues = [];
   }
 
-  swipeStart = null;
-});
+  requestAnimationFrame(audioLoop);
+}
 
 // ===============================
-// マウス高速移動 → Play
+// Voice Classification (PC / Mobile Optimized)
 // ===============================
-let lastMouseX = null;
-let lastMouseTime = null;
+let weakHold = 0;
+let strongHold = 0;
 
-window.addEventListener("mousemove", e => {
-  const now = Date.now();
+function classifyVoiceByCatSpeech(score, features) {
 
-  if (lastMouseX !== null) {
-    const dx = Math.abs(e.clientX - lastMouseX);
-    const dt = now - lastMouseTime;
-
-    if (dt > 0) {
-      const speed = dx / dt;
-      if (speed > 1.0 && currentState === "neutral") {
-        setState("play");
-      }
+  // ===============================
+  // Long Meow Detection (nyan_long / mya_long)
+  // ===============================
+  if (features.durationMs >= 300 && features.durationMs <= 900) {
+    if (features.mid > features.high + 5) {
+      return "nyan_long";
+    }
+    if (features.mid > 10 && features.high < features.mid) {
+      return "mya_long";
     }
   }
 
-  lastMouseX = e.clientX;
-  lastMouseTime = now;
+  // ===============================
+  // Harsh Voice (High + Loud)
+  // ===============================
+  if (features.volume > 40 && features.high > features.mid) {
+    return "harsh";
+  }
+
+  // ===============================
+  // CatSpeechScore (PC / Mobile Auto-Switch)
+  // ===============================
+  if (score >= CAT_SPEECH_AFFECTION) {
+    strongHold++;
+    if (strongHold >= (isMobile ? 3 : 1)) {
+      strongHold = 0;
+      return "cat_speech_strong";
+    }
+  } else {
+    strongHold = 0;
+  }
+
+  if (score >= CAT_SPEECH_ATTENTION) {
+    weakHold++;
+    if (weakHold >= (isMobile ? 2 : 1)) {
+      weakHold = 0;
+      return "cat_speech_weak";
+    }
+  } else {
+    weakHold = 0;
+  }
+
+  return "none";
+}
+
+// ===============================
+// Handle Voice Type → State Transition
+// ===============================
+function handleVoiceType(type) {
+
+  // Long Meow → Affection
+  if (type === "nyan_long" || type === "mya_long") {
+    setState("affection");
+    return;
+  }
+
+  // Harsh → Avoidance（全状態）
+  if (type === "harsh") {
+    setState("avoidance");
+    return;
+  }
+
+  // CatSpeechScore Weak → Attention
+  if (type === "cat_speech_weak") {
+    setState("attention");
+    return;
+  }
+
+  // CatSpeechScore Strong → Affection
+  if (type === "cat_speech_strong") {
+    setState("affection");
+    return;
+  }
+}
+// ===============================
+// Swipe / Mouse Interaction
+// ===============================
+
+let lastMouseMove = Date.now();
+let lastSwipeTime = Date.now();
+let swipeStartX = null;
+let swipeStartY = null;
+
+// ===============================
+// Mouse Move → Play（高速移動）
+// ===============================
+document.addEventListener("mousemove", (e) => {
+  const now = Date.now();
+  const dt = now - lastMouseMove;
+
+  const speed = Math.abs(e.movementX) + Math.abs(e.movementY);
+
+  // 高速マウス移動 → Play
+  if (speed > 40 && dt < 50) {
+    setState("play");
+  }
+
+  lastMouseMove = now;
   lastInputTime = now;
 });
 
 // ===============================
-// 無操作 → Sleep
+// Swipe Detection（スマホ / PC どちらも対応）
+// ===============================
+document.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  swipeStartX = t.clientX;
+  swipeStartY = t.clientY;
+  lastInputTime = Date.now();
+});
+
+document.addEventListener("touchmove", (e) => {
+  const t = e.touches[0];
+  const dx = t.clientX - swipeStartX;
+  const dy = t.clientY - swipeStartY;
+
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const now = Date.now();
+
+  // ゆっくりスワイプ → Affection
+  if (dist > 40 && dist < 120 && now - lastSwipeTime > 500) {
+    setState("affection");
+    lastSwipeTime = now;
+  }
+
+  // 高速スワイプ → Play
+  if (dist >= 120 && now - lastSwipeTime > 300) {
+    setState("play");
+    lastSwipeTime = now;
+  }
+
+  lastInputTime = now;
+});
+
+// ===============================
+// Tap → Avoidance
+// ===============================
+document.addEventListener("click", () => {
+  setState("avoidance");
+  lastInputTime = Date.now();
+});
+
+// ===============================
+// Sleep (No Input for 10s)
 // ===============================
 setInterval(() => {
   const now = Date.now();
-  if (currentState === "neutral" && now - lastInputTime > NO_INPUT_SLEEP_MS) {
+
+  if (currentState === "neutral" && now - lastInputTime > 10000) {
     setState("sleep");
   }
 }, 1000);
