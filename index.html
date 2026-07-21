@@ -28,8 +28,9 @@
       <div id="points">猫語検定 5級 <span class="paws">🐾</span></div>
     </div>
 
-    <!-- FaceMesh用ビデオ（非表示） -->
-    <video id="video" autoplay playsinline style="display:none;"></video>
+    <!-- FaceMesh用ビデオ（最小サイズで非表示扱い） -->
+    <video id="video" autoplay playsinline
+           style="width:1px;height:1px;opacity:0;position:absolute;left:-9999px;"></video>
 
     <!-- 猫画像（状態切り替え） -->
     <div id="cat-box">
@@ -46,11 +47,6 @@
 
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-      const myuImg = document.getElementById("myu");
-      if (!myuImg) {
-        console.error("Myu image element not found!");
-        return;
-      }
 
       // 初期状態
       setState("neutral");
