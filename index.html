@@ -5,16 +5,11 @@
   <title>PetApp4-Web (Myu Edition)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Google Fonts（猫っぽい丸文字） -->
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500&display=swap" rel="stylesheet">
-
-  <!-- CSS -->
   <link rel="stylesheet" href="style.css">
-
-  <!-- Favicon（404防止） -->
   <link rel="icon" href="assets/images/favicon.ico">
 
-  <!-- MediaPipe FaceMesh（CDN版） -->
+  <!-- MediaPipe FaceMesh -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 </head>
@@ -22,46 +17,35 @@
 
   <div id="app">
 
-    <!-- 猫語検定協会（会長：Myu）公認 -->
     <div id="rank-box">
       <div id="rank">猫語検定協会（会長：Myu）公認</div>
       <div id="points">猫語検定 5級 <span class="paws">🐾</span></div>
     </div>
 
-    <!-- FaceMesh用ビデオ（最小サイズで非表示扱い） -->
+    <!-- FaceMesh用ビデオ（非表示扱い） -->
     <video id="video" autoplay playsinline
            style="width:1px;height:1px;opacity:0;position:absolute;left:-9999px;"></video>
 
-    <!-- 猫画像（状態切り替え） -->
+    <!-- Myu画像 -->
     <div id="cat-box">
       <img id="myu" src="assets/images/myu_neutral.png" alt="Myu">
     </div>
 
-    <!-- 猫語キャリブレーション用の音声 -->
+    <!-- 共通猫鳴き（キャリブレーション＋Affection） -->
     <audio id="cat_mew_audio" src="assets/audio/cat_mew.wav"></audio>
 
   </div>
 
-  <!-- メインロジック（安全な初期化） -->
   <script src="main.js" defer></script>
 
   <script>
     window.addEventListener("DOMContentLoaded", () => {
-
-      // 初期状態
       setState("neutral");
-
-      // FaceMesh開始
       startFaceMesh();
-
-      // 音声解析開始
       startAudio();
-
-      // 猫語キャリブレーション開始
-      startCatCalibration();
+      calibrateCatVoice();   // ★ キャリブレーション開始（解析のみ）
     });
   </script>
 
 </body>
 </html>
-
