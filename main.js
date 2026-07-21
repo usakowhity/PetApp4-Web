@@ -98,7 +98,7 @@ function setState(newState) {
   if (newState === "affection") {
     lastAffectionTime = now;
 
-    const audio = new Audio("assets/audio/affection_mew.mp3");
+    const audio = new Audio("assets/audio/cat_mew.wav");
     audio.currentTime = 0;
     audio.play();
 
@@ -129,7 +129,7 @@ function setState(newState) {
 // ===============================
 // 猫語キャリブレーション（音質＋長音特性）
 // ===============================
-const CAT_VOICE_URL = "assets/audio/affection_mew.mp3";
+const CAT_VOICE_URL = "assets/audio/cat_mew.wav";
 
 let catProfile = {
   low: 0,
