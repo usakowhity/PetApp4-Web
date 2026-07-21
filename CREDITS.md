@@ -1,3 +1,6 @@
+# 🟩 CREDITS（最新版）
+
+```markdown
 # CREDITS
 
 PetApp4-Web (Myu Edition) consists of **AI‑generated static images**,  
@@ -35,7 +38,7 @@ and converted/processed by the developer:
 
 ```
 assets/audio/
-  affection_mew.mp3
+  cat_mew.wav
 ```
 
 Please follow the original license terms of the sound source.
@@ -44,21 +47,17 @@ Please follow the original license terms of the sound source.
 
 ## 🐾 3. External libraries
 
-This project uses the following external library:
-
 - **MediaPipe FaceMesh**  
   Google / MediaPipe  
-  https://github.com/google/mediapipe  
-  (Web version: face_mesh.js + packed assets)
+  https://github.com/google/mediapipe
 
 ---
 
 ## 🐾 4. Project copyright
-
-All original code, project structure, and documentation are copyrighted by:
 
 **MIT License  
 Copyright (c) 2026 usakowhity**
 
 Image and audio assets are **NOT covered by the MIT License**.  
 Please refer to the sections above for their usage terms.
+```

@@ -1,3 +1,6 @@
+# 🟩 README_EN.md（英語版・最新版）
+
+```markdown
 # PetApp4-Web (Myu Edition)
 
 **PetApp4-Web (Myu Edition)** is an AI pet web application where Myu, a Domestic Shorthair cat, acts as the **Chairperson of the Cat Language Certification Association**.  
@@ -10,7 +13,7 @@ This edition includes the **full Cat Language Calibration Model**, **CatSpeechSc
 ## Features
 
 ### 🐾 1. Cat Voice Calibration (Myu’s Voice Profile)
-PetApp4-Web analyzes Myu’s real meow (`assets/audio/affection_mew.mp3`) using:
+PetApp4-Web analyzes Myu’s real meow (`assets/audio/cat_mew.wav`) using:
 
 - FFT spectrum analysis  
 - Envelope extraction  
@@ -33,17 +36,14 @@ Your voice is evaluated using:
 
 The final score determines:
 
-- **cat_speech_weak → Attention**
-- **cat_speech_strong → Affection**
-- **nyan_long → Affection**
+- **cat_speech_weak → Attention**  
+- **cat_speech_strong → Affection**  
+- **nyan_long → Affection**  
 - **harsh → Avoidance**
-
-This creates a dynamic and expressive interaction.
 
 ---
 
 ### 🐾 3. PC / Mobile Auto-Adjustment
-The app automatically adjusts thresholds based on device type:
 
 | Feature | PC | Mobile |
 |--------|----|--------|
@@ -52,28 +52,19 @@ The app automatically adjusts thresholds based on device type:
 | CatSpeechScore thresholds | 15 / 30 | 20 / 35 |
 | Play gesture speed | 1.0 | 1.5 |
 
-This ensures stable behavior on both desktop and mobile browsers.
-
 ---
 
 ### 🐾 4. MediaPipe FaceMesh Blink Detection
-Using Google MediaPipe FaceMesh:
-
-- EAR (Eye Aspect Ratio) is calculated
-- Slow blinking triggers:
-  - **Neutral → Approach → Attention → Affection**
-
-Blink detection is stabilized using EAR filtering.
+- EAR (Eye Aspect Ratio) is calculated  
+- Slow blinking triggers:  
+  **Neutral → Approach → Attention → Affection**
 
 ---
 
 ### 🐾 5. Ambient Noise Calibration
-At startup, the app samples 1 second of ambient noise:
-
-- low / mid / high / volume averages  
-- stored as `noiseProfile`
-
-All voice analysis subtracts this noise baseline for accurate CatSpeechScore.
+- Samples 1 second of ambient noise  
+- Builds `noiseProfile`  
+- All voice analysis subtracts this baseline
 
 ---
 
@@ -87,8 +78,6 @@ All voice analysis subtracts this noise baseline for accurate CatSpeechScore.
 | Swipe / fast mouse move | Play |
 | No input for 10 seconds | Sleep → Stretch → Neutral |
 
-Myu reacts emotionally and smoothly transitions between states.
-
 ---
 
 ## Folder Structure
@@ -100,58 +89,27 @@ PetApp4-Web/
  ├── style.css
  ├── assets/
  │    ├── images/
- │    │    ├── myu_neutral.png
- │    │    ├── myu_approach.png
- │    │    ├── myu_attention.png
- │    │    ├── myu_affection.png
- │    │    ├── myu_avoidance.png
- │    │    ├── myu_play.png
- │    │    ├── myu_ignore.png
- │    │    ├── myu_sleep.png
- │    │    ├── myu_stretch.png
  │    └── audio/
- │         └── affection_mew.mp3
+ │         └── cat_mew.wav
 ```
-
----
-
-## How It Works
-
-### 1. Startup
-- Ambient noise calibration begins
-- Myu’s meow is analyzed to build the Cat Language Profile
-- Initial state is `neutral`
-
-### 2. Voice Interaction
-- FFT + noise correction + envelope analysis
-- CatSpeechScore is computed
-- State transitions occur based on score
-
-### 3. Blink Interaction
-- Slow blink → Approach → Attention → Affection
-
-### 4. Gesture Interaction
-- Swipe / fast mouse → Play
-- Harsh sound → Avoidance
-
-### 5. Idle Behavior
-- No input → Sleep → Stretch → Neutral
 
 ---
 
 ## Credits
 
 - **MediaPipe FaceMesh / CameraUtils**  
-  Used for blink detection and face tracking.
+  Google / MediaPipe
 
 - **Myu (Domestic Shorthair)**  
-  The main character and Chairperson of the Cat Language Certification Association.
+  Main character and Chairperson of the Cat Language Certification Association.
 
 ---
 
 ## License
 
-This project uses external libraries under their respective licenses.  
-All Myu images and audio are original assets created for PetApp4-Web (Myu Edition).
+MIT License  
+© 2026 usakowhity
 
-
+Image and audio assets are **not covered by MIT License**.  
+See the credits section for usage terms.
+```
