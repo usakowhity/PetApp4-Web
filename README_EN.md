@@ -1,4 +1,4 @@
-# 🟩 README_EN.md（英語版・最新版）
+# 🟩 README_EN.md（GitHub最適化版・最新版）
 
 ```markdown
 # PetApp4-Web (Myu Edition)
@@ -36,17 +36,19 @@ Your voice is evaluated using:
 
 The final score determines:
 
-- **cat_speech_weak → Attention**  
-- **cat_speech_strong → Affection**  
-- **nyan_long → Affection**  
-- **harsh → Avoidance**
+| Category | Reaction |
+| :------------------ | :------------------ |
+| cat_speech_weak | Attention |
+| cat_speech_strong | Affection |
+| nyan_long | Affection |
+| harsh | Avoidance |
 
 ---
 
 ### 🐾 3. PC / Mobile Auto-Adjustment
 
 | Feature | PC | Mobile |
-|--------|----|--------|
+| :---------------------- | :---: | :---: |
 | Blink EAR threshold | 0.25 | 0.18 |
 | Blink duration | 250 ms | 350 ms |
 | CatSpeechScore thresholds | 15 / 30 | 20 / 35 |
@@ -71,7 +73,7 @@ The final score determines:
 ### 🐾 6. Interaction System
 
 | Action | Result |
-|--------|--------|
+| :------------------------ | :------------------------ |
 | Long soft meow | Attention / Affection |
 | Strong cat-like meow | Affection |
 | Harsh loud sound | Avoidance |
@@ -80,9 +82,9 @@ The final score determines:
 
 ---
 
-## Folder Structure
+## 📁 Folder Structure
 
-```
+```text
 PetApp4-Web/
  ├── index.html
  ├── main.js
@@ -106,7 +108,7 @@ PetApp4-Web/
 ---
 
 ### 🌐 Live Demo
-https://petapp4-web-myu.netlify.app
+[PetApp4-Web (Myu Edition) Demo](https://petapp4-web-myu.netlify.app)
 
 ---
 
@@ -118,3 +120,5 @@ MIT License
 Image and audio assets are **not covered by MIT License**.  
 See the credits section for usage terms.
 ```
+
+---
