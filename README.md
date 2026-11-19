@@ -1,6 +1,3 @@
-# 🟩 README_JP.md（GitHub最適化版・最新版）
-
-```markdown
 # PetApp4-Web (Myu Edition)
 
 Myu（Domestic Shorthair）が「猫語検定協会会長」として登場する、  
@@ -132,6 +129,3 @@ PetApp4-Web/
 - **Myu（Domestic Shorthair）**  
   PetApp4-Web（Myu Edition）の主役  
   猫語検定協会会長として世界観を構成
-```
-
----

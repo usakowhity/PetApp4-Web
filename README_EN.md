@@ -1,6 +1,3 @@
-# 🟩 README_EN.md（GitHub最適化版・最新版）
-
-```markdown
 # PetApp4-Web (Myu Edition)
 
 **PetApp4-Web (Myu Edition)** is an AI pet web application where Myu, a Domestic Shorthair cat, acts as the **Chairperson of the Cat Language Certification Association**.  
@@ -119,6 +116,3 @@ MIT License
 
 Image and audio assets are **not covered by MIT License**.  
 See the credits section for usage terms.
-```
-
----
